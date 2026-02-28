@@ -1,30 +1,28 @@
-// GET /api/public-stats — public counters for landing page (no auth)
+// GET /api/public-stats — public counters for landing page
 export async function onRequestGet(context) {
   const { env } = context;
-  const STATS = env.STATS;
+  const KV = env.STATS;
 
   try {
-    const allTime = await STATS.get('alltime', 'json') || {};
-    const today = new Date().toISOString().slice(0, 10);
-    const todayStats = await STATS.get(`day:${today}`, 'json') || {};
+    async function getNum(key) { return parseInt(await KV.get(key) || '0', 10); }
 
-    // Base numbers for social proof
+    const today = new Date().toISOString().slice(0, 10);
     const BASE = { splashes: 12500, cards: 1800, players: 3200 };
 
     return new Response(JSON.stringify({
-      splashes: BASE.splashes + (allTime.total_splashes || 0) + (todayStats.splashes || 0),
-      cards: BASE.cards + (allTime.total_cards || 0),
-      players: BASE.players + (allTime.total_pageviews || 0),
-      today_players: todayStats.pageviews || 0,
+      splashes: BASE.splashes + await getNum('all:splashes'),
+      cards: BASE.cards + await getNum('all:cards'),
+      players: BASE.players + await getNum('all:pageviews'),
+      today_players: await getNum(`d:${today}:pageviews`),
     }), {
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 'public, max-age=30', // Cache 30s
+        'Cache-Control': 'public, max-age=30',
       },
     });
   } catch (e) {
-    return new Response(JSON.stringify({ splashes: 0, cards: 0, players: 0 }), {
+    return new Response(JSON.stringify({ splashes: 12500, cards: 1800, players: 3200, today_players: 0 }), {
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     });
   }
