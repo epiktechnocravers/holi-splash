@@ -20,6 +20,26 @@ const confettiOverlay = document.getElementById('confettiOverlay');
 const soundToggle = document.getElementById('soundToggle');
 
 let ctx, tapCount = 0, selectedColor = 'random';
+let canvasHistory = [], maxHistory = 20;
+function saveCanvasState() {
+    const data = ctx.getImageData(0, 0, mainCanvas.width, mainCanvas.height);
+    canvasHistory.push({ data, tapCount });
+    if (canvasHistory.length > maxHistory) canvasHistory.shift();
+    updateUndoBtn();
+}
+function undoCanvas() {
+    if (!canvasHistory.length) return;
+    const state = canvasHistory.pop();
+    ctx.putImageData(state.data, 0, 0);
+    tapCount = state.tapCount;
+    tapCounter.textContent = tapCount ? `🎨 ${tapCount} splashes` : '';
+    if (tapCount < 8) createCardBtn.classList.add('hidden');
+    updateUndoBtn();
+}
+function updateUndoBtn() {
+    const btn = document.getElementById('undoBtn');
+    if (btn) btn.style.opacity = canvasHistory.length ? '1' : '.3';
+}
 let hasPhoto = false, photoImage = null;
 let lastX = null, lastY = null;
 // Photo placement state
@@ -588,6 +608,7 @@ function onStart(e) {
     if (handlePhotoTouch(e)) return;
     isDrawing = true;
     const pts = getCanvasXY(e);
+    saveCanvasState();
     if (selectedSticker) {
         const def = STICKER_DEFS.find(d => d.id === selectedSticker);
         if (def) pts.forEach(p => { drawStickerOnCanvas(def, ctx, p.x, p.y); playPoofSound(); vibrate(30); });
@@ -785,8 +806,12 @@ document.getElementById('startBtn').addEventListener('click', () => {
     mainCanvas.addEventListener('touchend', onEnd, {passive: false});
 });
 
+// Undo
+document.getElementById('undoBtn').addEventListener('click', () => { undoCanvas(); });
+
 // Clear
 document.getElementById('clearBtn').addEventListener('click', () => {
+    canvasHistory = []; updateUndoBtn();
     tapCount = 0; tapCounter.textContent = '';
     createCardBtn.classList.add('hidden');
     challengeShown = false;
