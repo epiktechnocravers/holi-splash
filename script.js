@@ -238,6 +238,295 @@ function drawSplash(x, y, size) {
     }
 }
 
+// --- Sticker System ---
+let selectedSticker = null;
+let stickerBarVisible = false;
+
+const STICKER_DEFS = [
+    { id: 'balloon', name: 'Water Balloon', emoji: '🎈', draw: drawBalloon },
+    { id: 'pichkari', name: 'Pichkari', emoji: '🔫', draw: drawPichkari },
+    { id: 'gujiya', name: 'Gujiya', emoji: '🟡', draw: drawGujiya },
+    { id: 'dholak', name: 'Dholak', emoji: '🥁', draw: drawDholak },
+    { id: 'packet', name: 'Color Packet', emoji: '💧', draw: drawPacket },
+    { id: 'flower', name: 'Marigold', emoji: '🌸', draw: drawFlower },
+    { id: 'handprint', name: 'Handprint', emoji: '✋', draw: drawHandprint },
+    { id: 'face', name: 'Happy Face', emoji: '🎭', draw: drawHappyFace },
+];
+
+function randomHoliColor() { return COLORS[Math.random() * COLORS.length | 0]; }
+
+function drawBalloon(c, x, y, size, color) {
+    color = color || randomHoliColor();
+    const {r,g,b} = hexToRgb(color);
+    const s = size * 0.5;
+    c.save(); c.translate(x, y);
+    // Teardrop body
+    c.beginPath();
+    c.moveTo(0, -s);
+    c.bezierCurveTo(s * 0.8, -s, s, -s * 0.3, s * 0.5, s * 0.3);
+    c.bezierCurveTo(s * 0.2, s * 0.65, 0, s * 0.7, 0, s * 0.7);
+    c.bezierCurveTo(0, s * 0.7, -s * 0.2, s * 0.65, -s * 0.5, s * 0.3);
+    c.bezierCurveTo(-s, -s * 0.3, -s * 0.8, -s, 0, -s);
+    c.closePath();
+    const grad = c.createRadialGradient(-s * 0.2, -s * 0.3, 0, 0, 0, s);
+    grad.addColorStop(0, `rgba(${Math.min(r+60,255)},${Math.min(g+60,255)},${Math.min(b+60,255)},1)`);
+    grad.addColorStop(1, color);
+    c.fillStyle = grad; c.fill();
+    // Highlight
+    c.beginPath(); c.arc(-s * 0.2, -s * 0.4, s * 0.15, 0, Math.PI * 2);
+    c.fillStyle = 'rgba(255,255,255,0.5)'; c.fill();
+    // Knot
+    c.beginPath(); c.moveTo(-s * 0.08, s * 0.7); c.lineTo(0, s * 0.85); c.lineTo(s * 0.08, s * 0.7);
+    c.fillStyle = color; c.fill();
+    c.beginPath(); c.arc(0, s * 0.88, s * 0.06, 0, Math.PI * 2);
+    c.fillStyle = color; c.fill();
+    c.restore();
+}
+
+function drawPichkari(c, x, y, size) {
+    const s = size * 0.4;
+    c.save(); c.translate(x, y);
+    // Body
+    c.fillStyle = '#FFD600';
+    c.beginPath(); c.roundRect(-s * 0.8, -s * 0.25, s * 1.6, s * 0.5, 4); c.fill();
+    // Red stripes
+    c.fillStyle = '#F44336';
+    c.fillRect(-s * 0.3, -s * 0.25, s * 0.15, s * 0.5);
+    c.fillRect(s * 0.1, -s * 0.25, s * 0.15, s * 0.5);
+    // Nozzle
+    c.fillStyle = '#2196F3';
+    c.fillRect(s * 0.8, -s * 0.12, s * 0.5, s * 0.24);
+    c.beginPath(); c.moveTo(s * 1.3, -s * 0.18); c.lineTo(s * 1.5, -s * 0.08);
+    c.lineTo(s * 1.5, s * 0.08); c.lineTo(s * 1.3, s * 0.18); c.fillStyle = '#1565C0'; c.fill();
+    // Handle
+    c.fillStyle = '#E91E63';
+    c.beginPath(); c.roundRect(-s * 0.9, s * 0.1, s * 0.3, s * 0.6, 3); c.fill();
+    // Water drops
+    c.fillStyle = 'rgba(33,150,243,0.6)';
+    for (let i = 0; i < 3; i++) {
+        c.beginPath(); c.arc(s * 1.6 + i * s * 0.2, (Math.random() - 0.5) * s * 0.3, s * 0.06, 0, Math.PI * 2); c.fill();
+    }
+    c.restore();
+}
+
+function drawGujiya(c, x, y, size) {
+    const s = size * 0.45;
+    c.save(); c.translate(x, y);
+    // Half moon
+    c.beginPath();
+    c.moveTo(-s, 0);
+    c.quadraticCurveTo(-s, -s * 0.9, 0, -s * 0.9);
+    c.quadraticCurveTo(s, -s * 0.9, s, 0);
+    c.lineTo(-s, 0);
+    c.closePath();
+    const grad = c.createLinearGradient(0, -s, 0, 0);
+    grad.addColorStop(0, '#D4A017'); grad.addColorStop(1, '#B8860B');
+    c.fillStyle = grad; c.fill();
+    c.strokeStyle = '#8B6914'; c.lineWidth = 1; c.stroke();
+    // Crimped edge
+    const steps = 12;
+    for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const cx2 = -s + t * 2 * s;
+        const cy2 = -s * 0.9 * Math.sin(t * Math.PI);
+        c.beginPath(); c.arc(cx2, -cy2 * 0.95 - s * 0.05, s * 0.07, 0, Math.PI, true); 
+        c.strokeStyle = '#8B6914'; c.lineWidth = 1.2; c.stroke();
+    }
+    // Base line
+    c.beginPath(); c.moveTo(-s, 0); c.lineTo(s, 0);
+    c.strokeStyle = '#8B6914'; c.lineWidth = 1.5; c.stroke();
+    c.restore();
+}
+
+function drawDholak(c, x, y, size) {
+    const s = size * 0.4;
+    c.save(); c.translate(x, y);
+    // Barrel shape
+    c.beginPath();
+    c.moveTo(-s, -s * 0.4);
+    c.quadraticCurveTo(0, -s * 0.7, s, -s * 0.4);
+    c.lineTo(s, s * 0.4);
+    c.quadraticCurveTo(0, s * 0.7, -s, s * 0.4);
+    c.closePath();
+    const grad = c.createLinearGradient(-s, 0, s, 0);
+    grad.addColorStop(0, '#8B4513'); grad.addColorStop(0.5, '#A0522D'); grad.addColorStop(1, '#8B4513');
+    c.fillStyle = grad; c.fill();
+    c.strokeStyle = '#5C2E00'; c.lineWidth = 1.5; c.stroke();
+    // Zig-zag rope
+    c.beginPath(); c.strokeStyle = '#F5DEB3'; c.lineWidth = 1.5;
+    const zigN = 8;
+    for (let i = 0; i <= zigN; i++) {
+        const px = -s * 0.8 + (i / zigN) * s * 1.6;
+        const py = (i % 2 === 0 ? -1 : 1) * s * 0.2;
+        if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
+    }
+    c.stroke();
+    // End circles
+    c.fillStyle = '#DEB887';
+    c.beginPath(); c.ellipse(-s, 0, s * 0.12, s * 0.4, 0, 0, Math.PI * 2); c.fill(); c.stroke();
+    c.beginPath(); c.ellipse(s, 0, s * 0.12, s * 0.4, 0, 0, Math.PI * 2); c.fill(); c.stroke();
+    c.restore();
+}
+
+function drawPacket(c, x, y, size, color) {
+    color = color || randomHoliColor();
+    const s = size * 0.4;
+    c.save(); c.translate(x, y);
+    // Pouch
+    c.beginPath(); c.roundRect(-s * 0.7, -s * 0.5, s * 1.4, s * 1.1, 6);
+    c.fillStyle = color; c.fill();
+    c.strokeStyle = 'rgba(0,0,0,0.2)'; c.lineWidth = 1.5; c.stroke();
+    // Gathered top
+    c.beginPath();
+    c.moveTo(-s * 0.5, -s * 0.5);
+    c.quadraticCurveTo(-s * 0.2, -s * 0.8, 0, -s * 0.7);
+    c.quadraticCurveTo(s * 0.2, -s * 0.8, s * 0.5, -s * 0.5);
+    c.fillStyle = color; c.fill();
+    // Burst lines
+    c.strokeStyle = 'rgba(255,255,255,0.6)'; c.lineWidth = 1.5;
+    for (let i = 0; i < 5; i++) {
+        const a = -Math.PI * 0.8 + (i / 4) * Math.PI * 0.6;
+        c.beginPath(); c.moveTo(Math.cos(a) * s * 0.3, -s * 0.65 + Math.sin(a) * s * 0.1);
+        c.lineTo(Math.cos(a) * s * 0.55, -s * 0.75 + Math.sin(a) * s * 0.25); c.stroke();
+    }
+    // HOLI text
+    c.fillStyle = '#fff'; c.font = `bold ${s * 0.35}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('HOLI', 0, s * 0.1);
+    c.restore();
+}
+
+function drawFlower(c, x, y, size) {
+    const s = size * 0.45;
+    c.save(); c.translate(x, y);
+    // Outer petals
+    const petals = 14;
+    for (let layer = 0; layer < 2; layer++) {
+        const r = s * (layer === 0 ? 1 : 0.65);
+        const offset = layer * Math.PI / petals;
+        for (let i = 0; i < petals; i++) {
+            const a = offset + (i / petals) * Math.PI * 2;
+            c.save(); c.rotate(a);
+            c.beginPath(); c.ellipse(0, -r * 0.55, s * 0.2, r * 0.45, 0, 0, Math.PI * 2);
+            c.fillStyle = layer === 0 ? '#FF8C00' : '#FFA500'; c.fill();
+            c.restore();
+        }
+    }
+    // Center
+    c.beginPath(); c.arc(0, 0, s * 0.2, 0, Math.PI * 2);
+    c.fillStyle = '#8B4513'; c.fill();
+    c.restore();
+}
+
+function drawHandprint(c, x, y, size, color) {
+    color = color || randomHoliColor();
+    const s = size * 0.022;
+    c.save(); c.translate(x, y); c.scale(s, s);
+    c.beginPath();
+    // Palm
+    c.ellipse(0, 5, 12, 14, 0, 0, Math.PI * 2);
+    // Fingers (simplified)
+    const fingers = [
+        {x: -10, y: -12, w: 4, h: 12, a: 0.2},
+        {x: -4, y: -18, w: 3.5, h: 13, a: 0.05},
+        {x: 2, y: -19, w: 3.5, h: 13, a: -0.05},
+        {x: 8, y: -16, w: 3.5, h: 12, a: -0.15},
+        {x: 14, y: -4, w: 3.5, h: 10, a: -0.7},
+    ];
+    fingers.forEach(f => {
+        c.save(); c.translate(f.x, f.y); c.rotate(f.a);
+        c.ellipse(0, 0, f.w, f.h, 0, 0, Math.PI * 2);
+        c.restore();
+    });
+    c.fillStyle = color; c.fill();
+    // Grain texture
+    const {r,g,b} = hexToRgb(color);
+    for (let i = 0; i < 20; i++) {
+        c.beginPath(); c.arc((Math.random() - 0.5) * 20, (Math.random() - 0.5) * 30, 0.8, 0, Math.PI * 2);
+        c.fillStyle = `rgba(${Math.max(r-40,0)},${Math.max(g-40,0)},${Math.max(b-40,0)},0.3)`; c.fill();
+    }
+    c.restore();
+}
+
+function drawHappyFace(c, x, y, size) {
+    const s = size * 0.45;
+    c.save(); c.translate(x, y);
+    // Face circle
+    c.beginPath(); c.arc(0, 0, s, 0, Math.PI * 2);
+    c.fillStyle = '#FFD600'; c.fill(); c.strokeStyle = '#E6B800'; c.lineWidth = 2; c.stroke();
+    // Eyes
+    c.fillStyle = '#333';
+    c.beginPath(); c.arc(-s * 0.3, -s * 0.2, s * 0.1, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(s * 0.3, -s * 0.2, s * 0.1, 0, Math.PI * 2); c.fill();
+    // Smile
+    c.beginPath(); c.arc(0, s * 0.05, s * 0.5, 0.1 * Math.PI, 0.9 * Math.PI);
+    c.strokeStyle = '#333'; c.lineWidth = 2; c.stroke();
+    // Tilak
+    c.fillStyle = '#F44336';
+    c.beginPath(); c.ellipse(0, -s * 0.55, s * 0.1, s * 0.15, 0, 0, Math.PI * 2); c.fill();
+    // Color splashes on face
+    for (let i = 0; i < 4; i++) {
+        const clr = randomHoliColor();
+        const sx = (Math.random() - 0.5) * s * 1.2;
+        const sy = (Math.random() - 0.5) * s * 1.2;
+        c.beginPath(); c.arc(sx, sy, s * 0.15 + Math.random() * s * 0.1, 0, Math.PI * 2);
+        c.fillStyle = clr; c.globalAlpha = 0.35; c.fill(); c.globalAlpha = 1;
+    }
+    c.restore();
+}
+
+function drawStickerOnCanvas(sticker, cx2, sx, sy) {
+    const baseSize = 60 + Math.random() * 30;
+    const rot = (Math.random() - 0.5) * Math.PI / 6;
+    cx2.save(); cx2.translate(sx, sy); cx2.rotate(rot);
+    sticker.draw(cx2, 0, 0, baseSize, randomHoliColor());
+    cx2.restore();
+}
+
+function initStickerUI() {
+    const list = document.getElementById('stickerList');
+    const bar = document.getElementById('stickerBar');
+    const toggleBtn = document.getElementById('stickerToggleBtn');
+    const hint = document.getElementById('stickerHint');
+
+    STICKER_DEFS.forEach(def => {
+        const item = document.createElement('div');
+        item.className = 'sticker-item';
+        item.dataset.stickerId = def.id;
+        // Draw preview
+        const preview = document.createElement('canvas');
+        preview.width = 40; preview.height = 40;
+        const pc = preview.getContext('2d');
+        def.draw(pc, 20, 20, 36, randomHoliColor());
+        item.appendChild(preview);
+        item.addEventListener('click', () => {
+            if (selectedSticker === def.id) {
+                selectedSticker = null;
+                item.classList.remove('active');
+                hint.classList.add('hidden');
+            } else {
+                document.querySelectorAll('.sticker-item').forEach(el => el.classList.remove('active'));
+                selectedSticker = def.id;
+                item.classList.add('active');
+                hint.textContent = `Tap to place ${def.name}!`;
+                hint.classList.remove('hidden');
+                setTimeout(() => hint.classList.add('hidden'), 2000);
+            }
+        });
+        list.appendChild(item);
+    });
+
+    toggleBtn.addEventListener('click', () => {
+        stickerBarVisible = !stickerBarVisible;
+        bar.classList.toggle('hidden', !stickerBarVisible);
+        toggleBtn.classList.toggle('active', stickerBarVisible);
+        if (!stickerBarVisible) {
+            selectedSticker = null;
+            document.querySelectorAll('.sticker-item').forEach(el => el.classList.remove('active'));
+            hint.classList.add('hidden');
+        }
+    });
+}
+
 // --- Canvas Setup ---
 function initMainCanvas() {
     const dpr = devicePixelRatio || 1;
@@ -275,11 +564,17 @@ let isDrawing = false;
 function onStart(e) {
     e.preventDefault(); isDrawing = true;
     const pts = getCanvasXY(e);
+    if (selectedSticker) {
+        const def = STICKER_DEFS.find(d => d.id === selectedSticker);
+        if (def) pts.forEach(p => { drawStickerOnCanvas(def, ctx, p.x, p.y); playPoofSound(); vibrate(30); });
+        isDrawing = false;
+        return;
+    }
     pts.forEach(p => { drawSplash(p.x, p.y); lastX = p.x; lastY = p.y; });
 }
 function onMove(e) {
     e.preventDefault();
-    if (!isDrawing) return;
+    if (!isDrawing || selectedSticker) return;
     const pts = getCanvasXY(e);
     pts.forEach(p => {
         if (lastX !== null && lastY !== null) {
@@ -479,4 +774,5 @@ window.addEventListener('resize', () => {
 
 // Init
 initBgParticles();
+initStickerUI();
 })();
