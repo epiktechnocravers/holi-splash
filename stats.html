@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Holi Splash — Analytics</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; background: #0f0f1a; color: #fff; min-height: 100vh; padding: 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { font-size: 1.8rem; background: linear-gradient(135deg, #E91E63, #FF6B35); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header p { color: #888; font-size: .85rem; margin-top: 4px; }
+        .login { max-width: 300px; margin: 100px auto; text-align: center; }
+        .login input { width: 100%; padding: 14px; border: 2px solid #333; border-radius: 12px; background: #1a1a2e; color: #fff; font-size: 1rem; font-family: 'Poppins'; text-align: center; margin-bottom: 12px; outline: none; }
+        .login input:focus { border-color: #E91E63; }
+        .login button { width: 100%; padding: 14px; border: none; border-radius: 12px; background: linear-gradient(135deg, #E91E63, #FF6B35); color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer; font-family: 'Poppins'; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
+        .stat-card { background: #1a1a2e; border-radius: 14px; padding: 16px; text-align: center; border: 1px solid #2a2a4a; }
+        .stat-card .value { font-size: 1.8rem; font-weight: 700; background: linear-gradient(135deg, #E91E63, #9C27B0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .stat-card .label { font-size: .7rem; color: #888; margin-top: 4px; text-transform: uppercase; letter-spacing: .05em; }
+        .section { background: #1a1a2e; border-radius: 14px; padding: 20px; margin-bottom: 16px; border: 1px solid #2a2a4a; }
+        .section h3 { font-size: .9rem; color: #E91E63; margin-bottom: 12px; text-transform: uppercase; letter-spacing: .05em; }
+        .bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 120px; padding-top: 10px; }
+        .bar { flex: 1; background: linear-gradient(to top, #E91E63, #FF6B35); border-radius: 4px 4px 0 0; min-height: 2px; position: relative; transition: height .3s; }
+        .bar .bar-label { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); font-size: .55rem; color: #666; }
+        .bar .bar-value { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: .6rem; color: #aaa; }
+        .list-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #2a2a4a; font-size: .85rem; }
+        .list-item:last-child { border-bottom: none; }
+        .list-item .key { color: #aaa; }
+        .list-item .val { font-weight: 600; color: #E91E63; }
+        .color-bar { display: flex; gap: 6px; flex-wrap: wrap; }
+        .color-stat { display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: #12121f; border-radius: 8px; font-size: .75rem; }
+        .color-dot { width: 16px; height: 16px; border-radius: 50%; }
+        .day-row { display: grid; grid-template-columns: 90px 1fr repeat(3, 60px); gap: 8px; padding: 8px 0; border-bottom: 1px solid #2a2a4a; font-size: .75rem; align-items: center; }
+        .day-row.header-row { color: #666; font-weight: 600; text-transform: uppercase; font-size: .65rem; }
+        .day-bar { height: 8px; background: linear-gradient(to right, #E91E63, #FF6B35); border-radius: 4px; }
+        .empty { text-align: center; color: #555; padding: 40px; }
+        #dashboard { display: none; }
+        .refresh-btn { position: fixed; top: 16px; right: 16px; background: #1a1a2e; border: 1px solid #2a2a4a; color: #888; padding: 8px 14px; border-radius: 10px; cursor: pointer; font-family: 'Poppins'; font-size: .8rem; }
+        .refresh-btn:hover { border-color: #E91E63; color: #E91E63; }
+        .live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #4CAF50; margin-right: 6px; animation: blink 2s infinite; }
+        @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+    </style>
+</head>
+<body>
+    <div id="loginScreen" class="login">
+        <h2 style="margin-bottom:20px;">🔐 Analytics</h2>
+        <input type="password" id="keyInput" placeholder="Enter access key" autocomplete="off">
+        <button onclick="doLogin()">View Stats</button>
+    </div>
+
+    <div id="dashboard">
+        <div class="header">
+            <h1>🎨 Holi Splash Analytics</h1>
+            <p><span class="live-dot"></span>Live Dashboard — <span id="lastUpdated"></span></p>
+        </div>
+        <button class="refresh-btn" onclick="loadStats()">🔄 Refresh</button>
+
+        <!-- Today's Stats -->
+        <div class="grid" id="todayGrid"></div>
+
+        <!-- Hourly Chart -->
+        <div class="section">
+            <h3>📊 Today's Traffic (Hourly)</h3>
+            <div class="bar-chart" id="hourlyChart"></div>
+        </div>
+
+        <!-- Device Split -->
+        <div class="section">
+            <h3>📱 Devices</h3>
+            <div id="deviceStats"></div>
+        </div>
+
+        <!-- Popular Colors -->
+        <div class="section">
+            <h3>🎨 Popular Colors</h3>
+            <div class="color-bar" id="colorStats"></div>
+        </div>
+
+        <!-- Referrers -->
+        <div class="section">
+            <h3>🔗 Top Referrers</h3>
+            <div id="referrerStats"></div>
+        </div>
+
+        <!-- Last 7 Days -->
+        <div class="section">
+            <h3>📅 Last 7 Days</h3>
+            <div id="weeklyStats"></div>
+        </div>
+
+        <!-- All Time -->
+        <div class="section">
+            <h3>🏆 All Time</h3>
+            <div id="alltimeStats"></div>
+        </div>
+    </div>
+
+    <script>
+    let API_KEY = '';
+
+    function doLogin() {
+        API_KEY = document.getElementById('keyInput').value;
+        loadStats();
+    }
+    document.getElementById('keyInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+    async function loadStats() {
+        try {
+            const res = await fetch(`/api/stats?key=${API_KEY}`);
+            if (res.status === 401) { alert('Wrong key!'); return; }
+            const data = await res.json();
+
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('lastUpdated').textContent = new Date(data.generated_at).toLocaleString();
+
+            renderToday(data.today);
+            renderHourly(data.today?.hourly || {});
+            renderDevices(data.today?.devices || {});
+            renderColors(data.today?.colors || {});
+            renderReferrers(data.today?.referrers || {});
+            renderWeekly(data.last7days || []);
+            renderAlltime(data.alltime || {});
+        } catch (e) {
+            alert('Error loading stats: ' + e.message);
+        }
+    }
+
+    function renderToday(t) {
+        if (!t) { document.getElementById('todayGrid').innerHTML = '<div class="empty">No data yet today</div>'; return; }
+        const cards = [
+            { value: t.pageviews || 0, label: 'Pageviews', emoji: '👁️' },
+            { value: t.unique_visitors || 0, label: 'Unique Visitors', emoji: '👤' },
+            { value: t.splashes || 0, label: 'Splashes', emoji: '🎨' },
+            { value: t.cards_created || 0, label: 'Cards Made', emoji: '✨' },
+            { value: t.cards_shared || 0, label: 'Shared', emoji: '📤' },
+            { value: t.photos_uploaded || 0, label: 'Photos', emoji: '📸' },
+        ];
+        document.getElementById('todayGrid').innerHTML = cards.map(c =>
+            `<div class="stat-card"><div class="value">${c.emoji} ${c.value.toLocaleString()}</div><div class="label">${c.label}</div></div>`
+        ).join('');
+    }
+
+    function renderHourly(hourly) {
+        const chart = document.getElementById('hourlyChart');
+        const max = Math.max(1, ...Object.values(hourly));
+        let html = '';
+        for (let h = 0; h < 24; h++) {
+            const v = hourly[h] || 0;
+            const pct = (v / max) * 100;
+            html += `<div class="bar" style="height:${Math.max(2, pct)}%">
+                <span class="bar-value">${v || ''}</span>
+                <span class="bar-label">${h}</span>
+            </div>`;
+        }
+        chart.innerHTML = html;
+    }
+
+    function renderDevices(devices) {
+        const total = (devices.mobile || 0) + (devices.desktop || 0);
+        if (!total) { document.getElementById('deviceStats').innerHTML = '<div class="empty">No data</div>'; return; }
+        const mPct = Math.round(((devices.mobile || 0) / total) * 100);
+        document.getElementById('deviceStats').innerHTML = `
+            <div style="display:flex;gap:20px;justify-content:center;">
+                <div class="stat-card" style="flex:1;"><div class="value">📱 ${mPct}%</div><div class="label">Mobile (${devices.mobile || 0})</div></div>
+                <div class="stat-card" style="flex:1;"><div class="value">💻 ${100-mPct}%</div><div class="label">Desktop (${devices.desktop || 0})</div></div>
+            </div>`;
+    }
+
+    function renderColors(colors) {
+        const el = document.getElementById('colorStats');
+        const sorted = Object.entries(colors).sort((a,b) => b[1] - a[1]).slice(0, 8);
+        if (!sorted.length) { el.innerHTML = '<div class="empty">No data</div>'; return; }
+        el.innerHTML = sorted.map(([c, v]) =>
+            `<div class="color-stat"><div class="color-dot" style="background:${c}"></div>${v}</div>`
+        ).join('');
+    }
+
+    function renderReferrers(refs) {
+        const el = document.getElementById('referrerStats');
+        const sorted = Object.entries(refs).sort((a,b) => b[1] - a[1]).slice(0, 10);
+        if (!sorted.length) { el.innerHTML = '<div class="empty">No data</div>'; return; }
+        el.innerHTML = sorted.map(([k, v]) =>
+            `<div class="list-item"><span class="key">${k}</span><span class="val">${v}</span></div>`
+        ).join('');
+    }
+
+    function renderWeekly(days) {
+        const el = document.getElementById('weeklyStats');
+        if (!days.length) { el.innerHTML = '<div class="empty">No data yet</div>'; return; }
+        const maxPV = Math.max(1, ...days.map(d => d.pageviews || 0));
+        let html = '<div class="day-row header-row"><span>Date</span><span>Traffic</span><span>Views</span><span>Cards</span><span>Shares</span></div>';
+        days.forEach(d => {
+            const pct = ((d.pageviews || 0) / maxPV) * 100;
+            html += `<div class="day-row">
+                <span style="color:#aaa;">${d.date?.slice(5) || '?'}</span>
+                <span><div class="day-bar" style="width:${Math.max(2,pct)}%"></div></span>
+                <span style="color:#E91E63;font-weight:600;">${d.pageviews || 0}</span>
+                <span style="color:#9C27B0;">${d.cards_created || 0}</span>
+                <span style="color:#4CAF50;">${d.cards_shared || 0}</span>
+            </div>`;
+        });
+        el.innerHTML = html;
+    }
+
+    function renderAlltime(at) {
+        const el = document.getElementById('alltimeStats');
+        if (!at.total_pageviews) { el.innerHTML = '<div class="empty">No data yet</div>'; return; }
+        const items = [
+            ['Total Pageviews', at.total_pageviews || 0],
+            ['Total Splashes', at.total_splashes || 0],
+            ['Cards Created', at.total_cards || 0],
+            ['Cards Shared', at.total_shares || 0],
+            ['Photos Uploaded', at.total_photos || 0],
+            ['Days Active', at.days_active || 0],
+            ['First Visit', at.first_visit || '—'],
+        ];
+        el.innerHTML = items.map(([k,v]) =>
+            `<div class="list-item"><span class="key">${k}</span><span class="val">${v.toLocaleString ? v.toLocaleString() : v}</span></div>`
+        ).join('');
+    }
+    </script>
+</body>
+</html>

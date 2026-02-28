@@ -4,6 +4,16 @@
 const COLORS = ['#FF6B35','#E91E63','#4CAF50','#FFD600','#2196F3','#FF69B4','#9C27B0','#F44336'];
 const SITE_URL = 'https://holisplash.in';
 
+// --- Analytics ---
+function track(event, extra = {}) {
+    try {
+        const body = { event, referrer: document.referrer || 'direct', ...extra };
+        fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {});
+    } catch {}
+}
+// Track pageview on load
+track('pageview');
+
 // Elements
 const landing = document.getElementById('landing');
 const bgCanvas = document.getElementById('bgCanvas');
@@ -248,6 +258,7 @@ function drawSplash(x, y, size) {
     vibrate(30);
 
     tapCount++;
+    if (tapCount % 10 === 1) track('splash', { color: color }); // Track every 10th splash
     tapCounter.textContent = `🎨 ${tapCount} splashes`;
     const wm = document.getElementById('canvasWatermark');
     if (wm && !wm.classList.contains('hidden')) wm.classList.add('hidden');
@@ -537,6 +548,7 @@ function initStickerUI() {
                 document.querySelectorAll('.sticker-item').forEach(el => el.classList.remove('active'));
                 selectedSticker = def.id;
                 item.classList.add('active');
+                track('sticker_used');
                 hint.textContent = `Tap to place ${def.name}!`;
                 hint.classList.remove('hidden');
                 setTimeout(() => hint.classList.add('hidden'), 2000);
@@ -747,6 +759,7 @@ function initFrameUI() {
             document.querySelectorAll('.frame-item').forEach(el => el.classList.remove('active'));
             item.classList.add('active');
             selectedFrame = def.id;
+            if (def.id !== 'none') track('frame_used');
             applyFrame();
         });
         list.appendChild(item);
@@ -1129,6 +1142,7 @@ photoInput.addEventListener('change', (e) => {
         img.onload = () => {
             photoImage = img;
             hasPhoto = true;
+            track('photo_uploaded');
             // Update toolbar photo icon
             const pBtn = document.querySelector('[data-tool="photo"] .tb-icon');
             if (pBtn) pBtn.textContent = '✕';
@@ -1366,6 +1380,7 @@ document.getElementById('generateBtn').addEventListener('click', () => {
     const name = nameInput.value.trim() || 'Friend';
     nameOverlay.classList.add('hidden');
     generateCard(name);
+    track('card_created');
     showScreen(cardScreen);
     setTimeout(launchConfetti, 400);
 });
@@ -1396,6 +1411,7 @@ function showToast(msg) {
 
 // Share (native share with image)
 document.getElementById('shareBtn').addEventListener('click', async () => {
+    track('card_shared');
     try {
         const file = await getCardFile();
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
