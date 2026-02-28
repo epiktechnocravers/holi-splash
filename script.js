@@ -22,6 +22,10 @@ const soundToggle = document.getElementById('soundToggle');
 let ctx, tapCount = 0, selectedColor = 'random';
 let hasPhoto = false, photoImage = null;
 let lastX = null, lastY = null;
+// Photo placement state
+let photoPlacing = false;
+let photoX = 0, photoY = 0, photoScale = 1, photoRotation = 0;
+let photoDragStart = null, photoPinchStart = null, photoScaleStart = 1;
 let soundEnabled = false;
 let audioCtx = null;
 let challengeShown = false;
@@ -537,8 +541,23 @@ function initMainCanvas() {
     mainCanvas.height = mainCanvas.offsetHeight * dpr;
     ctx = mainCanvas.getContext('2d');
     ctx.scale(dpr, dpr);
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, mainCanvas.offsetWidth, mainCanvas.offsetHeight);
+    paintInitialBackground();
+}
+
+function paintInitialBackground() {
+    const w = mainCanvas.offsetWidth, h = mainCanvas.offsetHeight;
+    // Soft pastel wash so no white gaps behind UI
+    ctx.fillStyle = '#FFF8F0';
+    ctx.fillRect(0, 0, w, h);
+    const pastels = ['rgba(255,107,53,.08)','rgba(233,30,99,.08)','rgba(76,175,80,.08)','rgba(255,214,0,.08)','rgba(33,150,243,.08)','rgba(156,39,176,.08)'];
+    for (let i = 0; i < 12; i++) {
+        const cx = Math.random() * w, cy = Math.random() * h, r = Math.random() * 200 + 100;
+        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+        g.addColorStop(0, pastels[i % pastels.length]);
+        g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+    }
 }
 
 function getCanvasXY(e) {
@@ -565,7 +584,9 @@ function interpolatePoints(x0, y0, x1, y1, minDist) {
 // --- Touch/Mouse Events ---
 let isDrawing = false;
 function onStart(e) {
-    e.preventDefault(); isDrawing = true;
+    e.preventDefault();
+    if (handlePhotoTouch(e)) return;
+    isDrawing = true;
     const pts = getCanvasXY(e);
     if (selectedSticker) {
         const def = STICKER_DEFS.find(d => d.id === selectedSticker);
@@ -577,6 +598,7 @@ function onStart(e) {
 }
 function onMove(e) {
     e.preventDefault();
+    if (handlePhotoTouch(e)) return;
     if (!isDrawing || selectedSticker) return;
     const pts = getCanvasXY(e);
     pts.forEach(p => {
@@ -592,7 +614,7 @@ function onMove(e) {
         lastX = p.x; lastY = p.y;
     });
 }
-function onEnd(e) { e.preventDefault(); isDrawing = false; lastX = null; lastY = null; }
+function onEnd(e) { e.preventDefault(); handlePhotoTouch(e); isDrawing = false; lastX = null; lastY = null; }
 
 // --- Color Picker ---
 document.querySelectorAll('.color-dot').forEach(dot => {
@@ -737,8 +759,7 @@ document.getElementById('clearBtn').addEventListener('click', () => {
     if (hasPhoto && photoImage) {
         drawPhotoBackground();
     } else {
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, mainCanvas.offsetWidth, mainCanvas.offsetHeight);
+        paintInitialBackground();
     }
 });
 
@@ -749,13 +770,13 @@ const photoInput = document.getElementById('photoInput');
 photoBtn.addEventListener('click', () => {
     if (hasPhoto) {
         if (!confirm('Remove photo and clear canvas?')) return;
-        hasPhoto = false; photoImage = null;
+        hasPhoto = false; photoImage = null; photoPlacing = false;
         photoBtn.textContent = '📸';
         photoBtn.classList.remove('has-photo');
+        hidePhotoPlacementUI();
         tapCount = 0; tapCounter.textContent = '';
         createCardBtn.classList.add('hidden');
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, mainCanvas.offsetWidth, mainCanvas.offsetHeight);
+        paintInitialBackground();
     } else {
         photoInput.click();
     }
@@ -774,7 +795,8 @@ photoInput.addEventListener('change', (e) => {
             photoBtn.classList.add('has-photo');
             tapCount = 0; tapCounter.textContent = '';
             createCardBtn.classList.add('hidden');
-            drawPhotoBackground();
+            // Start placement mode
+            startPhotoPlacement();
         };
         img.src = ev.target.result;
     };
@@ -782,21 +804,178 @@ photoInput.addEventListener('change', (e) => {
     photoInput.value = '';
 });
 
-function drawPhotoBackground() {
+// --- Photo Placement Mode ---
+function startPhotoPlacement() {
+    photoPlacing = true;
     const cw = mainCanvas.offsetWidth, ch = mainCanvas.offsetHeight;
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, cw, ch);
+    // Default: center, fit 60% of canvas width
     const imgRatio = photoImage.width / photoImage.height;
-    const canvasRatio = cw / ch;
-    let sw, sh, sx, sy;
-    if (imgRatio > canvasRatio) {
-        sh = photoImage.height; sw = sh * canvasRatio;
-        sx = (photoImage.width - sw) / 2; sy = 0;
-    } else {
-        sw = photoImage.width; sh = sw / canvasRatio;
-        sx = 0; sy = (photoImage.height - sh) / 2;
+    const fitW = cw * 0.6;
+    photoScale = fitW / photoImage.width;
+    photoX = cw / 2;
+    photoY = ch / 2;
+    photoRotation = 0;
+    showPhotoPlacementUI();
+    renderPhotoPlacement();
+}
+
+function showPhotoPlacementUI() {
+    let bar = document.getElementById('photoPlacementBar');
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'photoPlacementBar';
+        bar.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:10;display:flex;gap:10px;';
+        bar.innerHTML = `
+            <button id="photoDoneBtn" class="btn" style="background:linear-gradient(135deg,#4CAF50,#2E7D32);color:#fff;padding:12px 28px;font-size:1rem;border-radius:50px;box-shadow:0 4px 15px rgba(76,175,80,.4);">✅ Place Photo</button>
+            <button id="photoCancelBtn" class="btn" style="background:rgba(255,255,255,.2);color:#fff;padding:12px 20px;font-size:.9rem;border-radius:50px;backdrop-filter:blur(5px);">Cancel</button>
+        `;
+        playScreen.appendChild(bar);
+        document.getElementById('photoDoneBtn').addEventListener('click', stampPhoto);
+        document.getElementById('photoCancelBtn').addEventListener('click', cancelPhotoPlacement);
     }
-    ctx.drawImage(photoImage, sx, sy, sw, sh, 0, 0, cw, ch);
+    bar.style.display = 'flex';
+    // Show placement hint
+    let hint = document.getElementById('placeHint');
+    if (!hint) {
+        hint = document.createElement('div');
+        hint.id = 'placeHint';
+        hint.style.cssText = 'position:fixed;top:100px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#fff;padding:8px 18px;border-radius:20px;font-size:.82rem;z-index:10;backdrop-filter:blur(5px);text-align:center;';
+        hint.textContent = '👆 Drag to move • Pinch to resize';
+        playScreen.appendChild(hint);
+    }
+    hint.style.display = 'block';
+    // Hide other controls while placing
+    document.getElementById('colorPicker').style.opacity = '0.3';
+    document.getElementById('colorPicker').style.pointerEvents = 'none';
+}
+
+function hidePhotoPlacementUI() {
+    const bar = document.getElementById('photoPlacementBar');
+    if (bar) bar.style.display = 'none';
+    const hint = document.getElementById('placeHint');
+    if (hint) hint.style.display = 'none';
+    document.getElementById('colorPicker').style.opacity = '1';
+    document.getElementById('colorPicker').style.pointerEvents = 'auto';
+}
+
+function renderPhotoPlacement() {
+    if (!photoPlacing || !photoImage) return;
+    const cw = mainCanvas.offsetWidth, ch = mainCanvas.offsetHeight;
+    // Redraw background
+    paintInitialBackground();
+    // Draw photo with transform
+    const dw = photoImage.width * photoScale;
+    const dh = photoImage.height * photoScale;
+    ctx.save();
+    ctx.translate(photoX, photoY);
+    ctx.rotate(photoRotation);
+    // Photo with rounded corners and shadow
+    ctx.shadowColor = 'rgba(0,0,0,.3)';
+    ctx.shadowBlur = 20;
+    ctx.drawImage(photoImage, -dw / 2, -dh / 2, dw, dh);
+    ctx.shadowBlur = 0;
+    // Dashed border to show it's movable
+    ctx.strokeStyle = 'rgba(255,255,255,.7)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 4]);
+    ctx.strokeRect(-dw / 2 - 4, -dh / 2 - 4, dw + 8, dh + 8);
+    ctx.setLineDash([]);
+    // Corner handles
+    const hs = 10;
+    ctx.fillStyle = '#fff';
+    [[-dw/2-4, -dh/2-4], [dw/2-hs+4, -dh/2-4], [-dw/2-4, dh/2-hs+4], [dw/2-hs+4, dh/2-hs+4]].forEach(([hx, hy]) => {
+        ctx.fillRect(hx, hy, hs, hs);
+    });
+    ctx.restore();
+}
+
+function stampPhoto() {
+    if (!photoPlacing || !photoImage) return;
+    photoPlacing = false;
+    hidePhotoPlacementUI();
+    // Draw final photo on canvas (no border/handles)
+    paintInitialBackground();
+    const dw = photoImage.width * photoScale;
+    const dh = photoImage.height * photoScale;
+    ctx.save();
+    ctx.translate(photoX, photoY);
+    ctx.rotate(photoRotation);
+    ctx.drawImage(photoImage, -dw / 2, -dh / 2, dw, dh);
+    ctx.restore();
+    // Show photo hint
+    const phint = document.getElementById('photoHint');
+    if (phint) { phint.classList.remove('hidden'); setTimeout(() => phint.classList.add('hidden'), 2500); }
+}
+
+function cancelPhotoPlacement() {
+    photoPlacing = false;
+    hasPhoto = false;
+    photoImage = null;
+    photoBtn.textContent = '📸';
+    photoBtn.classList.remove('has-photo');
+    hidePhotoPlacementUI();
+    paintInitialBackground();
+}
+
+// Photo placement touch handlers (on mainCanvas)
+function handlePhotoTouch(e) {
+    if (!photoPlacing) return false;
+    const touches = e.touches || [];
+
+    if (e.type === 'touchstart' || e.type === 'mousedown') {
+        if (touches.length === 2) {
+            // Pinch start
+            const dx = touches[1].clientX - touches[0].clientX;
+            const dy = touches[1].clientY - touches[0].clientY;
+            photoPinchStart = Math.sqrt(dx * dx + dy * dy);
+            photoScaleStart = photoScale;
+        } else {
+            const rect = mainCanvas.getBoundingClientRect();
+            const px = (touches[0] || e).clientX - rect.left;
+            const py = (touches[0] || e).clientY - rect.top;
+            photoDragStart = { x: px - photoX, y: py - photoY };
+        }
+        return true;
+    }
+
+    if (e.type === 'touchmove' || e.type === 'mousemove') {
+        if (touches.length === 2 && photoPinchStart) {
+            // Pinch resize
+            const dx = touches[1].clientX - touches[0].clientX;
+            const dy = touches[1].clientY - touches[0].clientY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            photoScale = Math.max(0.1, Math.min(3, photoScaleStart * (dist / photoPinchStart)));
+            renderPhotoPlacement();
+        } else if (photoDragStart) {
+            const rect = mainCanvas.getBoundingClientRect();
+            const px = (touches[0] || e).clientX - rect.left;
+            const py = (touches[0] || e).clientY - rect.top;
+            photoX = px - photoDragStart.x;
+            photoY = py - photoDragStart.y;
+            renderPhotoPlacement();
+        }
+        return true;
+    }
+
+    if (e.type === 'touchend' || e.type === 'mouseup') {
+        photoDragStart = null;
+        photoPinchStart = null;
+        return true;
+    }
+    return false;
+}
+
+function drawPhotoBackground() {
+    // Legacy: used when clearing with photo — now stamps directly
+    if (!photoImage) return;
+    const cw = mainCanvas.offsetWidth, ch = mainCanvas.offsetHeight;
+    const dw = photoImage.width * photoScale;
+    const dh = photoImage.height * photoScale;
+    ctx.save();
+    ctx.translate(photoX, photoY);
+    ctx.rotate(photoRotation);
+    ctx.drawImage(photoImage, -dw / 2, -dh / 2, dw, dh);
+    ctx.restore();
 }
 
 // Create Card

@@ -25,7 +25,7 @@ html, body { width: 100%; height: 100dvh; overflow: hidden; font-family: 'Poppin
 #playScreen { background: #fff; }
 #mainCanvas { width: 100%; height: 100dvh; touch-action: none; cursor: crosshair; }
 
-.color-picker { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; background: rgba(0,0,0,.7); backdrop-filter: blur(10px); padding: 8px 14px; border-radius: 50px; z-index: 5; }
+.color-picker { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; background: rgba(0,0,0,.55); backdrop-filter: blur(10px); padding: 8px 14px; border-radius: 50px; z-index: 5; pointer-events: auto; }
 .color-dot { width: 32px; height: 32px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: all .15s; display: flex; align-items: center; justify-content: center; font-size: 16px; }
 .color-dot.active { border-color: #fff; transform: scale(1.2); box-shadow: 0 0 10px rgba(255,255,255,.5); animation: dotBounce .3s ease-out; }
 @keyframes dotBounce { 0% { transform: scale(1); } 50% { transform: scale(1.35); } 100% { transform: scale(1.2); } }
@@ -42,7 +42,7 @@ html, body { width: 100%; height: 100dvh; overflow: hidden; font-family: 'Poppin
 
 .btn-sound { position: fixed; top: 16px; right: 12px; z-index: 5; background: rgba(0,0,0,.5); color: #fff; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: .85rem; backdrop-filter: blur(5px); line-height: 1; border-radius: 12px; }
 
-.btn-card { position: fixed; top: 56px; left: 50%; transform: translateX(-50%); z-index: 5; background: linear-gradient(135deg, #E91E63, #9C27B0); color: #fff; animation: slideDown .4s ease-out, cardGlow 2s infinite 1s; box-shadow: 0 4px 20px rgba(156,39,176,.4); }
+.btn-card { position: fixed; top: 56px; left: 50%; transform: translateX(-50%); z-index: 5; background: linear-gradient(135deg, #E91E63, #9C27B0); color: #fff; animation: slideDown .4s ease-out, cardGlow 2s infinite 1s; box-shadow: 0 4px 20px rgba(156,39,176,.4); pointer-events: auto; }
 .btn-card.hidden { display: none; }
 @keyframes slideDown { from { opacity: 0; transform: translateX(-50%) translateY(-20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 @keyframes cardGlow { 0%,100% { box-shadow: 0 4px 20px rgba(156,39,176,.4); } 50% { box-shadow: 0 4px 35px rgba(156,39,176,.8), 0 0 20px rgba(233,30,99,.5); } }
