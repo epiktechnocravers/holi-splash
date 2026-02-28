@@ -24,7 +24,7 @@ let hasPhoto = false, photoImage = null;
 let lastX = null, lastY = null;
 // Photo placement state
 let photoPlacing = false;
-let photoX = 0, photoY = 0, photoScale = 1, photoRotation = 0;
+let photoX = 0, photoY = 0, photoScale = 1, photoRotation = 0, photoFlipX = false;
 let photoDragStart = null, photoPinchStart = null, photoScaleStart = 1;
 let soundEnabled = false;
 let audioCtx = null;
@@ -770,7 +770,7 @@ const photoInput = document.getElementById('photoInput');
 photoBtn.addEventListener('click', () => {
     if (hasPhoto) {
         if (!confirm('Remove photo and clear canvas?')) return;
-        hasPhoto = false; photoImage = null; photoPlacing = false;
+        hasPhoto = false; photoImage = null; photoPlacing = false; photoFlipX = false;
         photoBtn.textContent = '📸';
         photoBtn.classList.remove('has-photo');
         hidePhotoPlacementUI();
@@ -826,12 +826,14 @@ function showPhotoPlacementUI() {
         bar.id = 'photoPlacementBar';
         bar.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:10;display:flex;gap:10px;';
         bar.innerHTML = `
+            <button id="photoFlipBtn" class="btn" style="background:rgba(255,255,255,.2);color:#fff;padding:12px 16px;font-size:1.1rem;border-radius:50px;backdrop-filter:blur(5px);" title="Flip/Mirror">↔️</button>
             <button id="photoDoneBtn" class="btn" style="background:linear-gradient(135deg,#4CAF50,#2E7D32);color:#fff;padding:12px 28px;font-size:1rem;border-radius:50px;box-shadow:0 4px 15px rgba(76,175,80,.4);">✅ Place Photo</button>
             <button id="photoCancelBtn" class="btn" style="background:rgba(255,255,255,.2);color:#fff;padding:12px 20px;font-size:.9rem;border-radius:50px;backdrop-filter:blur(5px);">Cancel</button>
         `;
         playScreen.appendChild(bar);
         document.getElementById('photoDoneBtn').addEventListener('click', stampPhoto);
         document.getElementById('photoCancelBtn').addEventListener('click', cancelPhotoPlacement);
+        document.getElementById('photoFlipBtn').addEventListener('click', () => { photoFlipX = !photoFlipX; renderPhotoPlacement(); });
     }
     bar.style.display = 'flex';
     // Show placement hint
@@ -869,6 +871,7 @@ function renderPhotoPlacement() {
     ctx.save();
     ctx.translate(photoX, photoY);
     ctx.rotate(photoRotation);
+    if (photoFlipX) ctx.scale(-1, 1);
     // Photo with rounded corners and shadow
     ctx.shadowColor = 'rgba(0,0,0,.3)';
     ctx.shadowBlur = 20;
@@ -900,6 +903,7 @@ function stampPhoto() {
     ctx.save();
     ctx.translate(photoX, photoY);
     ctx.rotate(photoRotation);
+    if (photoFlipX) ctx.scale(-1, 1);
     ctx.drawImage(photoImage, -dw / 2, -dh / 2, dw, dh);
     ctx.restore();
     // Show photo hint
@@ -911,6 +915,7 @@ function cancelPhotoPlacement() {
     photoPlacing = false;
     hasPhoto = false;
     photoImage = null;
+    photoFlipX = false;
     photoBtn.textContent = '📸';
     photoBtn.classList.remove('has-photo');
     hidePhotoPlacementUI();
@@ -974,6 +979,7 @@ function drawPhotoBackground() {
     ctx.save();
     ctx.translate(photoX, photoY);
     ctx.rotate(photoRotation);
+    if (photoFlipX) ctx.scale(-1, 1);
     ctx.drawImage(photoImage, -dw / 2, -dh / 2, dw, dh);
     ctx.restore();
 }
