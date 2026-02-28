@@ -17,6 +17,7 @@ const tapCounter = document.getElementById('tapCounter');
 const createCardBtn = document.getElementById('createCardBtn');
 
 let ctx, tapCount = 0, selectedColor = 'random', particles = [];
+let hasPhoto = false, photoImage = null;
 
 // --- Background Particles ---
 function initBgParticles() {
@@ -171,7 +172,7 @@ function generateCard(name) {
     cc.drawImage(mainCanvas, 0, 0);
 
     // Semi-transparent overlay for text readability
-    cc.fillStyle = 'rgba(0,0,0,.25)';
+    cc.fillStyle = hasPhoto ? 'rgba(0,0,0,.35)' : 'rgba(0,0,0,.25)';
     cc.fillRect(0, h * .3, w, h * .45);
 
     // "Happy Holi!" text
@@ -227,9 +228,76 @@ document.getElementById('startBtn').addEventListener('click', () => {
 document.getElementById('clearBtn').addEventListener('click', () => {
     tapCount = 0; tapCounter.textContent = '';
     createCardBtn.classList.add('hidden');
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, mainCanvas.offsetWidth, mainCanvas.offsetHeight);
+    if (hasPhoto && photoImage) {
+        drawPhotoBackground();
+    } else {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, mainCanvas.offsetWidth, mainCanvas.offsetHeight);
+    }
 });
+
+// Photo Upload
+const photoBtn = document.getElementById('photoBtn');
+const photoInput = document.getElementById('photoInput');
+const photoHint = document.getElementById('photoHint');
+
+photoBtn.addEventListener('click', () => {
+    if (hasPhoto) {
+        // Remove photo
+        if (!confirm('Remove photo and clear canvas?')) return;
+        hasPhoto = false; photoImage = null;
+        photoBtn.textContent = '📸';
+        photoBtn.classList.remove('has-photo');
+        photoHint.classList.add('hidden');
+        tapCount = 0; tapCounter.textContent = '';
+        createCardBtn.classList.add('hidden');
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, mainCanvas.offsetWidth, mainCanvas.offsetHeight);
+    } else {
+        photoInput.click();
+    }
+});
+
+photoInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+            photoImage = img;
+            hasPhoto = true;
+            photoBtn.textContent = '✕';
+            photoBtn.classList.add('has-photo');
+            photoHint.classList.remove('hidden');
+            setTimeout(() => photoHint.classList.add('hidden'), 3000);
+            tapCount = 0; tapCounter.textContent = '';
+            createCardBtn.classList.add('hidden');
+            drawPhotoBackground();
+        };
+        img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+    photoInput.value = '';
+});
+
+function drawPhotoBackground() {
+    const cw = mainCanvas.offsetWidth, ch = mainCanvas.offsetHeight;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, cw, ch);
+    // Cover mode
+    const imgRatio = photoImage.width / photoImage.height;
+    const canvasRatio = cw / ch;
+    let sw, sh, sx, sy;
+    if (imgRatio > canvasRatio) {
+        sh = photoImage.height; sw = sh * canvasRatio;
+        sx = (photoImage.width - sw) / 2; sy = 0;
+    } else {
+        sw = photoImage.width; sh = sw / canvasRatio;
+        sx = 0; sy = (photoImage.height - sh) / 2;
+    }
+    ctx.drawImage(photoImage, sx, sy, sw, sh, 0, 0, cw, ch);
+}
 
 // Create Card
 createCardBtn.addEventListener('click', () => { nameOverlay.classList.remove('hidden'); nameInput.focus(); });

@@ -44,8 +44,13 @@
             <div class="color-dot random active-mode" data-color="random" title="Random">🎲</div>
         </div>
         <div id="tapCounter" class="tap-counter"></div>
+        <div id="challengeText" class="challenge-text hidden">🎯 How many colors can you throw?</div>
+        <button id="soundToggle" class="btn btn-sound" title="Toggle Sound">🔇</button>
         <button id="createCardBtn" class="btn btn-card hidden">✨ Create Greeting Card</button>
         <button id="clearBtn" class="btn btn-clear">🗑️</button>
+        <button id="photoBtn" class="btn btn-photo">📸</button>
+        <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none">
+        <div id="photoHint" class="photo-hint hidden">Throw colors on your photo! 🎨</div>
     </div>
 
     <!-- Name Input Overlay -->
@@ -60,12 +65,16 @@
 
     <!-- Greeting Card Screen -->
     <div id="cardScreen" class="screen">
+        <div id="confettiOverlay" class="confetti-overlay"></div>
         <canvas id="cardCanvas"></canvas>
+        <div id="shareToast" class="share-toast hidden"></div>
         <div class="card-actions">
             <button id="downloadBtn" class="btn btn-download">📥 Download</button>
-            <button id="shareBtn" class="btn btn-share">📤 Share on WhatsApp</button>
-            <button id="copyBtn" class="btn btn-copy">🔗 Copy Link</button>
+            <button id="shareBtn" class="btn btn-share">📤 Share</button>
+            <button id="storyBtn" class="btn btn-story">📱 Create Story</button>
             <button id="backBtn" class="btn btn-back">← Make Another</button>
+            <button id="copyBtn" class="btn btn-copy">📋 Copy Image</button>
+            <button id="statusBtn" class="btn btn-status">📱 Set as Status</button>
         </div>
     </div>
 
