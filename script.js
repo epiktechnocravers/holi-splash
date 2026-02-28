@@ -2,7 +2,7 @@
 'use strict';
 
 const COLORS = ['#FF6B35','#E91E63','#4CAF50','#FFD600','#2196F3','#FF69B4','#9C27B0','#F44336'];
-const SITE_URL = 'https://holi-splash.pages.dev';
+const SITE_URL = 'https://holisplash.in';
 
 // Elements
 const landing = document.getElementById('landing');
@@ -1081,7 +1081,7 @@ function generateCard(name) {
     cc.font = `400 ${Math.min(w/30, 16)}px 'Poppins', sans-serif`;
     cc.fillStyle = 'rgba(255,255,255,.4)';
     cc.textAlign = 'right';
-    cc.fillText('holi-splash.pages.dev', w - 20 * dpr, h - 16 * dpr);
+    cc.fillText('holisplash.in', w - 20 * dpr, h - 16 * dpr);
 
     // Haptic celebration
     vibrate([50, 30, 50]);
