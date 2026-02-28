@@ -816,17 +816,19 @@ function applyFrame() {
     if (!overlay) {
         overlay = document.createElement('canvas');
         overlay.id = 'frameOverlay';
-        overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100dvh;pointer-events:none;z-index:2;';
+        overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;pointer-events:none;z-index:2;';
         playScreen.appendChild(overlay);
     }
     const dpr = devicePixelRatio || 1;
+    const visibleH = mainCanvas.offsetHeight - 60; // Exclude toolbar
+    overlay.style.height = visibleH + 'px';
     overlay.width = mainCanvas.offsetWidth * dpr;
-    overlay.height = mainCanvas.offsetHeight * dpr;
+    overlay.height = visibleH * dpr;
     const fc = overlay.getContext('2d');
     fc.scale(dpr, dpr);
-    fc.clearRect(0, 0, mainCanvas.offsetWidth, mainCanvas.offsetHeight);
+    fc.clearRect(0, 0, mainCanvas.offsetWidth, visibleH);
     if (def && def.id !== 'none') {
-        def.draw(fc, mainCanvas.offsetWidth, mainCanvas.offsetHeight);
+        def.draw(fc, mainCanvas.offsetWidth, visibleH);
     }
 }
 
@@ -1136,10 +1138,21 @@ function generateCard(name) {
     cc.fillText('2026', w / 2, h * .64);
 
     cc.shadowBlur = 0; cc.shadowOffsetY = 0;
-    cc.font = `400 ${Math.min(w/30, 16)}px 'Poppins', sans-serif`;
-    cc.fillStyle = 'rgba(255,255,255,.4)';
-    cc.textAlign = 'right';
-    cc.fillText('holisplash.in', w - 20 * dpr, h - 16 * dpr);
+
+    // Website URL watermark — visible but not intrusive
+    const urlSize = Math.min(w / 20, 22);
+    cc.font = `600 ${urlSize}px 'Poppins', sans-serif`;
+    cc.textAlign = 'center';
+    // Background pill
+    const urlText = '🎨 holisplash.in';
+    const urlW = cc.measureText(urlText).width + 30 * dpr;
+    cc.fillStyle = 'rgba(0,0,0,.4)';
+    cc.beginPath();
+    const pillX = w / 2 - urlW / 2, pillY = h - 50 * dpr, pillH = 32 * dpr;
+    cc.roundRect(pillX, pillY, urlW, pillH, 16 * dpr);
+    cc.fill();
+    cc.fillStyle = 'rgba(255,255,255,.9)';
+    cc.fillText(urlText, w / 2, h - 30 * dpr);
 
     // Haptic celebration
     vibrate([50, 30, 50]);
