@@ -2,7 +2,7 @@
 'use strict';
 
 const COLORS = ['#FF6B35','#E91E63','#4CAF50','#FFD600','#2196F3','#FF69B4','#9C27B0','#F44336'];
-const SITE_URL = 'https://holi.technocravers.com';
+const SITE_URL = 'https://holi-splash.pages.dev';
 
 // Elements
 const landing = document.getElementById('landing');
@@ -15,9 +15,54 @@ const nameOverlay = document.getElementById('nameOverlay');
 const nameInput = document.getElementById('nameInput');
 const tapCounter = document.getElementById('tapCounter');
 const createCardBtn = document.getElementById('createCardBtn');
+const challengeText = document.getElementById('challengeText');
+const confettiOverlay = document.getElementById('confettiOverlay');
+const soundToggle = document.getElementById('soundToggle');
 
-let ctx, tapCount = 0, selectedColor = 'random', particles = [];
-let hasPhoto = false, photoImage = null;
+let ctx, tapCount = 0, selectedColor = 'random';
+let lastX = null, lastY = null;
+let soundEnabled = false;
+let audioCtx = null;
+let challengeShown = false;
+
+// --- Web Audio API Sound ---
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+}
+
+function playPoofSound() {
+    if (!soundEnabled || !audioCtx) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const bufferSize = audioCtx.sampleRate * 0.05; // 50ms
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize); // white noise with decay
+    }
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    // Vary pitch
+    source.playbackRate.value = 0.8 + Math.random() * 0.8;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
+    source.connect(gain).connect(audioCtx.destination);
+    source.start();
+    source.stop(audioCtx.currentTime + 0.06);
+}
+
+soundToggle.addEventListener('click', () => {
+    soundEnabled = !soundEnabled;
+    soundToggle.textContent = soundEnabled ? '🔊' : '🔇';
+    if (soundEnabled) initAudio();
+});
+
+// --- Haptic Feedback ---
+function vibrate(pattern) {
+    if ('vibrate' in navigator) navigator.vibrate(pattern);
+}
 
 // --- Background Particles ---
 function initBgParticles() {
@@ -56,12 +101,56 @@ function hexToRgb(hex) {
     return {r,g,b};
 }
 
-function drawSplash(x, y, size) {
-    const color = getColor();
+// --- Secondary particle animation ---
+function animateParticles(x, y, color) {
     const {r,g,b} = hexToRgb(color);
-    const radius = size || (Math.random() * 40 + 40);
+    const count = 3 + (Math.random() * 3 | 0);
+    const parts = [];
+    for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1.5 + Math.random() * 3;
+        parts.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, r: 2 + Math.random() * 3, alpha: 1 });
+    }
+    let frame = 0;
+    function tick() {
+        frame++;
+        if (frame > 20) return;
+        parts.forEach(p => {
+            p.x += p.vx; p.y += p.vy;
+            p.alpha -= 0.05;
+            if (p.alpha <= 0) return;
+            ctx.save();
+            ctx.globalAlpha = p.alpha;
+            ctx.fillStyle = `rgb(${r},${g},${b})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+        requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+}
 
-    // Main blob using bezier curves
+// --- Fade-in splash animation ---
+function animateSplashFadeIn(x, y, color, radius, drawFn) {
+    let frame = 0;
+    const totalFrames = 3;
+    function tick() {
+        const alpha = (frame + 1) / totalFrames;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.globalCompositeOperation = 'multiply';
+        drawFn(x, y, color, radius);
+        ctx.restore();
+        frame++;
+        if (frame < totalFrames) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+}
+
+function drawSplashShape(x, y, color, radius) {
+    const {r,g,b} = hexToRgb(color);
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(Math.random() * Math.PI * 2);
@@ -87,6 +176,24 @@ function drawSplash(x, y, size) {
     ctx.fillStyle = grad;
     ctx.fill();
     ctx.restore();
+}
+
+function drawSplash(x, y, size) {
+    const color = getColor();
+    const {r,g,b} = hexToRgb(color);
+    const radius = size || (Math.random() * 40 + 40);
+
+    // Main blob with color mixing composite
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    drawSplashShape(x, y, color, radius);
+    ctx.restore();
+
+    // Also draw in normal mode for vibrancy on white
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    drawSplashShape(x, y, color, radius);
+    ctx.restore();
 
     // Smaller droplets
     const numDroplets = 5 + (Math.random() * 8 | 0);
@@ -97,7 +204,6 @@ function drawSplash(x, y, size) {
         const dy = y + Math.sin(angle) * dist;
         const dr = Math.random() * 10 + 3;
         ctx.beginPath();
-        // Tiny irregular blobs
         const pts = 5;
         for (let j = 0; j <= pts; j++) {
             const a = (j / pts) * Math.PI * 2;
@@ -112,10 +218,23 @@ function drawSplash(x, y, size) {
         ctx.fill();
     }
 
+    // Secondary flying particles
+    animateParticles(x, y, color);
+
+    // Sound & haptics
+    playPoofSound();
+    vibrate(30);
+
     tapCount++;
     tapCounter.textContent = `🎨 ${tapCount} splashes`;
     if (tapCount >= 8 && createCardBtn.classList.contains('hidden')) {
         createCardBtn.classList.remove('hidden');
+    }
+    // Challenge text after 5 splashes
+    if (tapCount === 5 && !challengeShown) {
+        challengeShown = true;
+        challengeText.classList.remove('hidden');
+        setTimeout(() => challengeText.classList.add('hidden'), 4000);
     }
 }
 
@@ -126,7 +245,6 @@ function initMainCanvas() {
     mainCanvas.height = mainCanvas.offsetHeight * dpr;
     ctx = mainCanvas.getContext('2d');
     ctx.scale(dpr, dpr);
-    // White background
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, mainCanvas.offsetWidth, mainCanvas.offsetHeight);
 }
@@ -139,18 +257,41 @@ function getCanvasXY(e) {
     return [{x: e.clientX - rect.left, y: e.clientY - rect.top}];
 }
 
+// --- Interpolation for smooth swipe ---
+function interpolatePoints(x0, y0, x1, y1, minDist) {
+    const dx = x1 - x0, dy = y1 - y0;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < minDist) return [{x: x1, y: y1}];
+    const steps = Math.ceil(dist / minDist);
+    const pts = [];
+    for (let i = 1; i <= steps; i++) {
+        pts.push({ x: x0 + dx * (i / steps), y: y0 + dy * (i / steps) });
+    }
+    return pts;
+}
+
 // --- Touch/Mouse Events ---
 let isDrawing = false;
 function onStart(e) {
     e.preventDefault(); isDrawing = true;
-    getCanvasXY(e).forEach(p => drawSplash(p.x, p.y));
+    const pts = getCanvasXY(e);
+    pts.forEach(p => { drawSplash(p.x, p.y); lastX = p.x; lastY = p.y; });
 }
 function onMove(e) {
     e.preventDefault();
     if (!isDrawing) return;
-    getCanvasXY(e).forEach(p => drawSplash(p.x, p.y, Math.random() * 25 + 20));
+    const pts = getCanvasXY(e);
+    pts.forEach(p => {
+        if (lastX !== null && lastY !== null) {
+            const interp = interpolatePoints(lastX, lastY, p.x, p.y, 15);
+            interp.forEach(ip => drawSplash(ip.x, ip.y, Math.random() * 15 + 12));
+        } else {
+            drawSplash(p.x, p.y, Math.random() * 15 + 12);
+        }
+        lastX = p.x; lastY = p.y;
+    });
 }
-function onEnd(e) { e.preventDefault(); isDrawing = false; }
+function onEnd(e) { e.preventDefault(); isDrawing = false; lastX = null; lastY = null; }
 
 // --- Color Picker ---
 document.querySelectorAll('.color-dot').forEach(dot => {
@@ -161,6 +302,54 @@ document.querySelectorAll('.color-dot').forEach(dot => {
     });
 });
 
+// --- Confetti on Greeting Card ---
+function launchConfetti() {
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:10;';
+    confettiOverlay.appendChild(canvas);
+    const cctx = canvas.getContext('2d');
+    const dpr = devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    cctx.scale(dpr, dpr);
+    const W = window.innerWidth, H = window.innerHeight;
+
+    const pieces = Array.from({length: 120}, () => ({
+        x: Math.random() * W,
+        y: Math.random() * -H,
+        w: 4 + Math.random() * 6,
+        h: 6 + Math.random() * 8,
+        color: COLORS[Math.random() * COLORS.length | 0],
+        vy: 2 + Math.random() * 3,
+        vx: (Math.random() - 0.5) * 2,
+        rot: Math.random() * Math.PI * 2,
+        rv: (Math.random() - 0.5) * 0.2,
+        isCircle: Math.random() > 0.5
+    }));
+
+    const start = performance.now();
+    function draw(now) {
+        if (now - start > 3000) { canvas.remove(); return; }
+        cctx.clearRect(0, 0, W, H);
+        pieces.forEach(p => {
+            p.x += p.vx; p.y += p.vy; p.rot += p.rv;
+            if (p.y > H + 20) return;
+            cctx.save();
+            cctx.translate(p.x, p.y);
+            cctx.rotate(p.rot);
+            cctx.fillStyle = p.color;
+            if (p.isCircle) {
+                cctx.beginPath(); cctx.arc(0, 0, p.w / 2, 0, Math.PI * 2); cctx.fill();
+            } else {
+                cctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+            }
+            cctx.restore();
+        });
+        requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+}
+
 // --- Greeting Card Generation ---
 function generateCard(name) {
     const w = mainCanvas.width, h = mainCanvas.height;
@@ -168,14 +357,11 @@ function generateCard(name) {
     cardCanvas.width = w; cardCanvas.height = h;
     const cc = cardCanvas.getContext('2d');
 
-    // Draw the colorful canvas as background
     cc.drawImage(mainCanvas, 0, 0);
 
-    // Semi-transparent overlay for text readability
-    cc.fillStyle = hasPhoto ? 'rgba(0,0,0,.35)' : 'rgba(0,0,0,.25)';
+    cc.fillStyle = 'rgba(0,0,0,.25)';
     cc.fillRect(0, h * .3, w, h * .45);
 
-    // "Happy Holi!" text
     const titleSize = Math.min(w / 6, 120);
     cc.textAlign = 'center';
     cc.textBaseline = 'middle';
@@ -186,35 +372,44 @@ function generateCard(name) {
     cc.shadowOffsetY = 4;
     cc.fillText('Happy Holi!', w / 2, h * .45);
 
-    // "From [Name]" text
     const nameSize = Math.min(w / 14, 48);
     cc.font = `600 ${nameSize}px 'Poppins', sans-serif`;
     cc.fillText(`From ${name}`, w / 2, h * .56);
 
-    // Year
     const yearSize = Math.min(w / 20, 32);
     cc.font = `400 ${yearSize}px 'Poppins', sans-serif`;
     cc.fillStyle = 'rgba(255,255,255,.8)';
     cc.fillText('2026', w / 2, h * .64);
 
-    // Watermark
     cc.shadowBlur = 0; cc.shadowOffsetY = 0;
     cc.font = `400 ${Math.min(w/30, 16)}px 'Poppins', sans-serif`;
     cc.fillStyle = 'rgba(255,255,255,.4)';
     cc.textAlign = 'right';
-    cc.fillText('technocravers.com', w - 20 * dpr, h - 16 * dpr);
+    cc.fillText('holi-splash.pages.dev', w - 20 * dpr, h - 16 * dpr);
+
+    // Haptic celebration
+    vibrate([50, 30, 50]);
 }
 
 // --- Screen Navigation ---
 function showScreen(screen) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    screen.classList.add('active');
+    const current = document.querySelector('.screen.active');
+    if (current && current !== screen) {
+        current.classList.add('fade-out');
+        setTimeout(() => {
+            current.classList.remove('active', 'fade-out');
+            screen.classList.add('active');
+        }, 200);
+    } else {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        screen.classList.add('active');
+    }
 }
 
 // Start
 document.getElementById('startBtn').addEventListener('click', () => {
     showScreen(playScreen);
-    initMainCanvas();
+    setTimeout(() => initMainCanvas(), 250);
     mainCanvas.addEventListener('mousedown', onStart);
     mainCanvas.addEventListener('mousemove', onMove);
     mainCanvas.addEventListener('mouseup', onEnd);
@@ -228,76 +423,11 @@ document.getElementById('startBtn').addEventListener('click', () => {
 document.getElementById('clearBtn').addEventListener('click', () => {
     tapCount = 0; tapCounter.textContent = '';
     createCardBtn.classList.add('hidden');
-    if (hasPhoto && photoImage) {
-        drawPhotoBackground();
-    } else {
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, mainCanvas.offsetWidth, mainCanvas.offsetHeight);
-    }
+    challengeShown = false;
+    challengeText.classList.add('hidden');
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, mainCanvas.offsetWidth, mainCanvas.offsetHeight);
 });
-
-// Photo Upload
-const photoBtn = document.getElementById('photoBtn');
-const photoInput = document.getElementById('photoInput');
-const photoHint = document.getElementById('photoHint');
-
-photoBtn.addEventListener('click', () => {
-    if (hasPhoto) {
-        // Remove photo
-        if (!confirm('Remove photo and clear canvas?')) return;
-        hasPhoto = false; photoImage = null;
-        photoBtn.textContent = '📸';
-        photoBtn.classList.remove('has-photo');
-        photoHint.classList.add('hidden');
-        tapCount = 0; tapCounter.textContent = '';
-        createCardBtn.classList.add('hidden');
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, mainCanvas.offsetWidth, mainCanvas.offsetHeight);
-    } else {
-        photoInput.click();
-    }
-});
-
-photoInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-        const img = new Image();
-        img.onload = () => {
-            photoImage = img;
-            hasPhoto = true;
-            photoBtn.textContent = '✕';
-            photoBtn.classList.add('has-photo');
-            photoHint.classList.remove('hidden');
-            setTimeout(() => photoHint.classList.add('hidden'), 3000);
-            tapCount = 0; tapCounter.textContent = '';
-            createCardBtn.classList.add('hidden');
-            drawPhotoBackground();
-        };
-        img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
-    photoInput.value = '';
-});
-
-function drawPhotoBackground() {
-    const cw = mainCanvas.offsetWidth, ch = mainCanvas.offsetHeight;
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, cw, ch);
-    // Cover mode
-    const imgRatio = photoImage.width / photoImage.height;
-    const canvasRatio = cw / ch;
-    let sw, sh, sx, sy;
-    if (imgRatio > canvasRatio) {
-        sh = photoImage.height; sw = sh * canvasRatio;
-        sx = (photoImage.width - sw) / 2; sy = 0;
-    } else {
-        sw = photoImage.width; sh = sw / canvasRatio;
-        sx = 0; sy = (photoImage.height - sh) / 2;
-    }
-    ctx.drawImage(photoImage, sx, sy, sw, sh, 0, 0, cw, ch);
-}
 
 // Create Card
 createCardBtn.addEventListener('click', () => { nameOverlay.classList.remove('hidden'); nameInput.focus(); });
@@ -308,48 +438,9 @@ document.getElementById('generateBtn').addEventListener('click', () => {
     nameOverlay.classList.add('hidden');
     generateCard(name);
     showScreen(cardScreen);
+    setTimeout(launchConfetti, 400);
 });
 nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('generateBtn').click(); });
-
-// --- Share helpers ---
-let shareCount = 0;
-const shareToast = document.getElementById('shareToast');
-
-function showToast(msg) {
-    shareToast.textContent = msg;
-    shareToast.classList.remove('hidden');
-    clearTimeout(shareToast._t);
-    shareToast._t = setTimeout(() => shareToast.classList.add('hidden'), 3000);
-}
-
-function trackShare() {
-    shareCount++;
-    if (shareCount >= 3) showToast("You're a Holi Ambassador! 🏆");
-    else showToast("🎉 You're spreading Holi joy!");
-}
-
-function getCardBlob() {
-    return new Promise(resolve => cardCanvas.toBlob(resolve, 'image/png'));
-}
-
-async function nativeShare(blob, text) {
-    const file = new File([blob], 'holi-greeting-2026.png', { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-            title: 'Happy Holi 2026! 🎨',
-            text: text || 'I made this colorful Holi greeting for you!',
-            url: SITE_URL,
-            files: [file]
-        });
-        return true;
-    }
-    return false;
-}
-
-function whatsAppFallback() {
-    const text = encodeURIComponent(`🎨 Happy Holi 2026! I made this colorful greeting for you! Check it out: ${SITE_URL}`);
-    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
-}
 
 // Download
 document.getElementById('downloadBtn').addEventListener('click', () => {
@@ -361,118 +452,19 @@ document.getElementById('downloadBtn').addEventListener('click', () => {
     }, 'image/png');
 });
 
-// Share (Web Share API → WhatsApp fallback)
-document.getElementById('shareBtn').addEventListener('click', async () => {
-    try {
-        const blob = await getCardBlob();
-        const shared = await nativeShare(blob);
-        if (shared) { trackShare(); return; }
-    } catch(e) { /* user cancelled or error */ }
-    whatsAppFallback();
-    trackShare();
+// Share WhatsApp
+document.getElementById('shareBtn').addEventListener('click', () => {
+    const text = encodeURIComponent(`🎨 Happy Holi 2026! I made this colorful greeting for you! Check it out: ${SITE_URL}`);
+    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
 });
 
-// Set as Status
-document.getElementById('statusBtn').addEventListener('click', async () => {
-    try {
-        const blob = await getCardBlob();
-        const shared = await nativeShare(blob, 'Set this as your WhatsApp Status! 🎨');
-        if (shared) { trackShare(); return; }
-    } catch(e) { /* cancelled */ }
-    whatsAppFallback();
-    trackShare();
-});
-
-// Copy Image to Clipboard
-document.getElementById('copyBtn').addEventListener('click', async () => {
-    const btn = document.getElementById('copyBtn');
-    try {
-        const blob = await getCardBlob();
-        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-        btn.textContent = '✅ Image Copied!';
-        setTimeout(() => btn.textContent = '📋 Copy Image', 2000);
-    } catch(e) {
-        // Fallback: copy URL
-        try {
-            await navigator.clipboard.writeText(SITE_URL);
-            btn.textContent = '✅ Link Copied!';
-        } catch(e2) {
-            btn.textContent = '❌ Failed';
-        }
-        setTimeout(() => btn.textContent = '📋 Copy Image', 2000);
-    }
-});
-
-// Instagram Story
-document.getElementById('storyBtn').addEventListener('click', async () => {
-    const name = nameInput.value.trim() || 'Friend';
-    const sw = 1080, sh = 1920;
-    const sc = document.createElement('canvas');
-    sc.width = sw; sc.height = sh;
-    const sx = sc.getContext('2d');
-
-    // Fill with gradient background
-    const bg = sx.createLinearGradient(0, 0, sw, sh);
-    bg.addColorStop(0, '#1a0a2e'); bg.addColorStop(1, '#2d1b69');
-    sx.fillStyle = bg; sx.fillRect(0, 0, sw, sh);
-
-    // Draw splash canvas cropped to fill 1080x1920
-    const srcW = mainCanvas.width, srcH = mainCanvas.height;
-    const scale = Math.max(sw / srcW, sh / srcH);
-    const dw = srcW * scale, dh = srcH * scale;
-    sx.drawImage(mainCanvas, (sw - dw) / 2, (sh - dh) / 2, dw, dh);
-
-    // Overlay for text
-    sx.fillStyle = 'rgba(0,0,0,.3)';
-    sx.fillRect(0, sh * .3, sw, sh * .4);
-
-    sx.textAlign = 'center'; sx.textBaseline = 'middle';
-    sx.shadowColor = 'rgba(0,0,0,.6)'; sx.shadowBlur = 20; sx.shadowOffsetY = 4;
-
-    // Happy Holi!
-    sx.font = "800 120px 'Baloo 2', cursive";
-    sx.fillStyle = '#fff';
-    sx.fillText('Happy Holi!', sw / 2, sh * .42);
-
-    // From Name
-    sx.font = "600 56px 'Poppins', sans-serif";
-    sx.fillText(`From ${name}`, sw / 2, sh * .52);
-
-    // Year
-    sx.font = "400 40px 'Poppins', sans-serif";
-    sx.fillStyle = 'rgba(255,255,255,.8)';
-    sx.fillText('2026', sw / 2, sh * .59);
-
-    // Swipe up
-    sx.shadowBlur = 0; sx.shadowOffsetY = 0;
-    sx.font = "400 28px 'Poppins', sans-serif";
-    sx.fillStyle = 'rgba(255,255,255,.6)';
-    sx.fillText('Swipe Up → holi-splash.pages.dev', sw / 2, sh * .92);
-
-    // Watermark
-    sx.font = "400 20px 'Poppins', sans-serif";
-    sx.fillStyle = 'rgba(255,255,255,.3)';
-    sx.textAlign = 'right';
-    sx.fillText('technocravers.com', sw - 30, sh - 30);
-
-    // Download + try share
-    sc.toBlob(async (blob) => {
-        // Try native share first
-        try {
-            const file = new File([blob], 'holi-story-2026.png', { type: 'image/png' });
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                await navigator.share({ title: 'Happy Holi 2026!', files: [file] });
-                trackShare();
-                return;
-            }
-        } catch(e) { /* cancelled */ }
-        // Fallback: download
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = 'holi-story-2026.png';
-        a.click(); URL.revokeObjectURL(url);
-        showToast('📱 Story image downloaded! Share it on Instagram');
-    }, 'image/png');
+// Copy Link
+document.getElementById('copyBtn').addEventListener('click', () => {
+    navigator.clipboard.writeText(SITE_URL).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => btn.textContent = '🔗 Copy Link', 2000);
+    });
 });
 
 // Back
