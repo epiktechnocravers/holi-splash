@@ -5,12 +5,27 @@ const COLORS = ['#FF6B35','#E91E63','#4CAF50','#FFD600','#2196F3','#FF69B4','#9C
 const SITE_URL = 'https://holisplash.in';
 
 // --- Analytics ---
+let _pendingSplashes = 0;
 function track(event, extra = {}) {
     try {
+        if (event === 'splash') {
+            _pendingSplashes++;
+            return; // Batched, sent via flushSplashes
+        }
         const body = { event, referrer: document.referrer || 'direct', ...extra };
         fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {});
     } catch {}
 }
+function flushSplashes() {
+    if (_pendingSplashes <= 0) return;
+    const count = _pendingSplashes;
+    _pendingSplashes = 0;
+    fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event: 'splash_batch', count }) }).catch(() => {});
+}
+// Flush splashes every 5 seconds
+setInterval(flushSplashes, 5000);
+// Also flush on page leave
+document.addEventListener('visibilitychange', () => { if (document.hidden) flushSplashes(); });
 // Track pageview on load
 track('pageview');
 
@@ -283,7 +298,7 @@ function drawSplash(x, y, size) {
     vibrate(30);
 
     tapCount++;
-    if (tapCount % 10 === 1) track('splash', { color: color }); // Track every 10th splash
+    track('splash', { color: color });
     tapCounter.textContent = `🎨 ${tapCount} splashes`;
     const wm = document.getElementById('canvasWatermark');
     if (wm && !wm.classList.contains('hidden')) wm.classList.add('hidden');

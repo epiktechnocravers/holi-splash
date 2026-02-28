@@ -40,7 +40,11 @@ export async function onRequestPost(context) {
       sticker_used: 'stickers_used',
     };
 
-    if (eventMap[event]) {
+    // Handle batched splashes
+    if (event === 'splash_batch') {
+      const count = Math.min(body.count || 1, 500); // Cap at 500 per batch
+      stats.splashes = (stats.splashes || 0) + count;
+    } else if (eventMap[event]) {
       stats[eventMap[event]] = (stats[eventMap[event]] || 0) + 1;
     }
 
@@ -86,6 +90,7 @@ export async function onRequestPost(context) {
       const atKey = 'total_' + eventMap[event].replace('_created','s').replace('_shared','_shares').replace('_uploaded','_photos');
       if (event === 'pageview') allTime.total_pageviews++;
       else if (event === 'splash') allTime.total_splashes++;
+      else if (event === 'splash_batch') allTime.total_splashes = (allTime.total_splashes || 0) + Math.min(body.count || 1, 500);
       else if (event === 'card_created') allTime.total_cards++;
       else if (event === 'card_shared') allTime.total_shares++;
       else if (event === 'photo_uploaded') allTime.total_photos++;
