@@ -17,7 +17,7 @@ const tapCounter = document.getElementById('tapCounter');
 const createCardBtn = document.getElementById('createCardBtn');
 const challengeText = document.getElementById('challengeText');
 const confettiOverlay = document.getElementById('confettiOverlay');
-const soundToggle = document.getElementById('soundToggle');
+// soundToggle handled via toolbar
 
 let ctx, tapCount = 0, selectedColor = 'random';
 let canvasHistory = [], maxHistory = 20;
@@ -78,11 +78,7 @@ function playPoofSound() {
     source.stop(audioCtx.currentTime + 0.06);
 }
 
-soundToggle.addEventListener('click', () => {
-    soundEnabled = !soundEnabled;
-    soundToggle.textContent = soundEnabled ? '🔊' : '🔇';
-    if (soundEnabled) initAudio();
-});
+// Sound toggle handled by toolbar
 
 // --- Haptic Feedback ---
 function vibrate(pattern) {
@@ -511,15 +507,12 @@ function drawStickerOnCanvas(sticker, cx2, sx, sy) {
 
 function initStickerUI() {
     const list = document.getElementById('stickerList');
-    const bar = document.getElementById('stickerBar');
-    const toggleBtn = document.getElementById('stickerToggleBtn');
     const hint = document.getElementById('stickerHint');
 
     STICKER_DEFS.forEach(def => {
         const item = document.createElement('div');
         item.className = 'sticker-item';
         item.dataset.stickerId = def.id;
-        // Draw preview
         const preview = document.createElement('canvas');
         preview.width = 40; preview.height = 40;
         const pc = preview.getContext('2d');
@@ -541,17 +534,316 @@ function initStickerUI() {
         });
         list.appendChild(item);
     });
+}
 
-    toggleBtn.addEventListener('click', () => {
-        stickerBarVisible = !stickerBarVisible;
-        bar.classList.toggle('hidden', !stickerBarVisible);
-        toggleBtn.classList.toggle('active', stickerBarVisible);
-        if (!stickerBarVisible) {
-            selectedSticker = null;
-            document.querySelectorAll('.sticker-item').forEach(el => el.classList.remove('active'));
-            hint.classList.add('hidden');
+// ========== HOLI FRAMES ==========
+const FRAME_DEFS = [
+    { id: 'none', name: 'No Frame', draw: () => {} },
+    { id: 'gulaal', name: 'Gulaal Border', draw: (c, w, h) => {
+        const colors = ['#E91E63','#FF6B35','#4CAF50','#FFD600','#9C27B0','#2196F3','#FF69B4'];
+        for (let i = 0; i < 60; i++) {
+            const edge = Math.floor(Math.random() * 4);
+            let x, y;
+            if (edge === 0) { x = Math.random() * w; y = Math.random() * 50; }
+            else if (edge === 1) { x = Math.random() * w; y = h - Math.random() * 50; }
+            else if (edge === 2) { x = Math.random() * 50; y = Math.random() * h; }
+            else { x = w - Math.random() * 50; y = Math.random() * h; }
+            const r = 8 + Math.random() * 25;
+            const g = c.createRadialGradient(x, y, 0, x, y, r);
+            g.addColorStop(0, colors[i % colors.length]);
+            g.addColorStop(1, 'transparent');
+            c.fillStyle = g; c.globalAlpha = 0.6 + Math.random() * 0.4;
+            c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
         }
+        c.globalAlpha = 1;
+    }},
+    { id: 'rangoli', name: 'Rangoli', draw: (c, w, h) => {
+        const bw = 14;
+        const colors = ['#E91E63','#FFD600','#4CAF50','#FF6B35','#9C27B0'];
+        // Draw colorful zigzag border
+        for (let ci = 0; ci < 3; ci++) {
+            const offset = ci * 5;
+            c.strokeStyle = colors[ci % colors.length]; c.lineWidth = 3;
+            c.beginPath();
+            for (let x = offset; x < w; x += 20) {
+                c.lineTo(x, offset + (x % 40 < 20 ? 0 : 10));
+            }
+            c.stroke();
+            c.beginPath();
+            for (let x = offset; x < w; x += 20) {
+                c.lineTo(x, h - offset - (x % 40 < 20 ? 0 : 10));
+            }
+            c.stroke();
+            c.beginPath();
+            for (let y = offset; y < h; y += 20) {
+                c.lineTo(offset + (y % 40 < 20 ? 0 : 10), y);
+            }
+            c.stroke();
+            c.beginPath();
+            for (let y = offset; y < h; y += 20) {
+                c.lineTo(w - offset - (y % 40 < 20 ? 0 : 10), y);
+            }
+            c.stroke();
+        }
+        // Corner flowers
+        const cs = 30;
+        [[cs,cs],[w-cs,cs],[cs,h-cs],[w-cs,h-cs]].forEach(([cx,cy]) => {
+            for (let p = 0; p < 6; p++) {
+                const a = (p / 6) * Math.PI * 2;
+                c.fillStyle = colors[p % colors.length]; c.globalAlpha = 0.7;
+                c.beginPath();
+                c.ellipse(cx + Math.cos(a) * 12, cy + Math.sin(a) * 12, 10, 6, a, 0, Math.PI * 2);
+                c.fill();
+            }
+            c.globalAlpha = 1; c.fillStyle = '#FFD600';
+            c.beginPath(); c.arc(cx, cy, 6, 0, Math.PI * 2); c.fill();
+        });
+    }},
+    { id: 'pichkari', name: 'Pichkari Splash', draw: (c, w, h) => {
+        const colors = ['#E91E63','#FF6B35','#4CAF50','#FFD600','#2196F3','#9C27B0'];
+        // Splash streams from corners
+        [[0,0,1,1],[w,0,-1,1],[0,h,1,-1],[w,h,-1,-1]].forEach(([sx,sy,dx,dy], i) => {
+            const clr = colors[i];
+            for (let j = 0; j < 8; j++) {
+                const dist = 20 + j * 12;
+                const spread = Math.random() * 20;
+                c.fillStyle = clr; c.globalAlpha = 0.5 - j * 0.04;
+                c.beginPath();
+                c.arc(sx + dx * dist + spread * dx, sy + dy * dist + spread * dy, 6 + Math.random() * 10, 0, Math.PI * 2);
+                c.fill();
+            }
+        });
+        c.globalAlpha = 1;
+        // Top/bottom color drips
+        for (let x = 20; x < w; x += 30 + Math.random() * 20) {
+            const clr = colors[Math.floor(Math.random() * colors.length)];
+            const dripH = 20 + Math.random() * 40;
+            c.fillStyle = clr; c.globalAlpha = 0.6;
+            c.beginPath(); c.moveTo(x - 8, 0); c.lineTo(x + 8, 0);
+            c.quadraticCurveTo(x + 4, dripH * 0.7, x, dripH);
+            c.quadraticCurveTo(x - 4, dripH * 0.7, x - 8, 0);
+            c.fill();
+        }
+        for (let x = 20; x < w; x += 30 + Math.random() * 20) {
+            const clr = colors[Math.floor(Math.random() * colors.length)];
+            const dripH = 20 + Math.random() * 40;
+            c.fillStyle = clr;
+            c.beginPath(); c.moveTo(x - 8, h); c.lineTo(x + 8, h);
+            c.quadraticCurveTo(x + 4, h - dripH * 0.7, x, h - dripH);
+            c.quadraticCurveTo(x - 4, h - dripH * 0.7, x - 8, h);
+            c.fill();
+        }
+        c.globalAlpha = 1;
+    }},
+    { id: 'marigold', name: 'Marigold Garland', draw: (c, w, h) => {
+        const petalColors = ['#FF8F00','#FFD600','#FF6F00','#FFA000'];
+        function drawFlower(cx, cy, size) {
+            for (let p = 0; p < 8; p++) {
+                const a = (p / 8) * Math.PI * 2;
+                c.fillStyle = petalColors[p % petalColors.length];
+                c.beginPath();
+                c.ellipse(cx + Math.cos(a) * size * 0.5, cy + Math.sin(a) * size * 0.5, size * 0.45, size * 0.25, a, 0, Math.PI * 2);
+                c.fill();
+            }
+            c.fillStyle = '#FF6F00';
+            c.beginPath(); c.arc(cx, cy, size * 0.2, 0, Math.PI * 2); c.fill();
+        }
+        // String/thread
+        c.strokeStyle = '#4CAF50'; c.lineWidth = 2;
+        // Top garland (draped)
+        c.beginPath();
+        for (let x = 0; x <= w; x += 5) {
+            const sag = Math.sin((x / w) * Math.PI) * 25 + 5;
+            if (x === 0) c.moveTo(x, sag); else c.lineTo(x, sag);
+        }
+        c.stroke();
+        for (let x = 10; x < w; x += 28) {
+            const sag = Math.sin((x / w) * Math.PI) * 25 + 5;
+            drawFlower(x, sag, 10 + Math.random() * 4);
+        }
+        // Bottom garland
+        c.beginPath();
+        for (let x = 0; x <= w; x += 5) {
+            const sag = h - Math.sin((x / w) * Math.PI) * 25 - 5;
+            if (x === 0) c.moveTo(x, sag); else c.lineTo(x, sag);
+        }
+        c.stroke();
+        for (let x = 10; x < w; x += 28) {
+            const sag = h - Math.sin((x / w) * Math.PI) * 25 - 5;
+            drawFlower(x, sag, 10 + Math.random() * 4);
+        }
+        // Side garlands
+        c.beginPath();
+        for (let y = 0; y <= h; y += 5) {
+            const sag = Math.sin((y / h) * Math.PI) * 20 + 5;
+            if (y === 0) c.moveTo(sag, y); else c.lineTo(sag, y);
+        }
+        c.stroke();
+        for (let y = 15; y < h; y += 28) {
+            const sag = Math.sin((y / h) * Math.PI) * 20 + 5;
+            drawFlower(sag, y, 10 + Math.random() * 4);
+        }
+        c.beginPath();
+        for (let y = 0; y <= h; y += 5) {
+            const sag = w - Math.sin((y / h) * Math.PI) * 20 - 5;
+            if (y === 0) c.moveTo(sag, y); else c.lineTo(sag, y);
+        }
+        c.stroke();
+        for (let y = 15; y < h; y += 28) {
+            const sag = w - Math.sin((y / h) * Math.PI) * 20 - 5;
+            drawFlower(sag, y, 10 + Math.random() * 4);
+        }
+    }},
+    { id: 'tika', name: 'Tika Dots', draw: (c, w, h) => {
+        const colors = ['#E91E63','#FF6B35','#FFD600','#4CAF50','#9C27B0','#F44336'];
+        const spacing = 18;
+        // Top & bottom rows
+        for (let x = spacing / 2; x < w; x += spacing) {
+            c.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+            c.beginPath(); c.arc(x, 8, 5, 0, Math.PI * 2); c.fill();
+            c.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+            c.beginPath(); c.arc(x, h - 8, 5, 0, Math.PI * 2); c.fill();
+        }
+        // Left & right columns
+        for (let y = spacing; y < h; y += spacing) {
+            c.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+            c.beginPath(); c.arc(8, y, 5, 0, Math.PI * 2); c.fill();
+            c.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+            c.beginPath(); c.arc(w - 8, y, 5, 0, Math.PI * 2); c.fill();
+        }
+    }}
+];
+
+let selectedFrame = 'none';
+
+function initFrameUI() {
+    const list = document.getElementById('frameList');
+    FRAME_DEFS.forEach(def => {
+        const item = document.createElement('div');
+        item.className = 'frame-item' + (def.id === 'none' ? ' active' : '');
+        item.dataset.frameId = def.id;
+        // Draw preview
+        const preview = document.createElement('canvas');
+        preview.width = 48; preview.height = 68;
+        const pc = preview.getContext('2d');
+        pc.fillStyle = '#fff'; pc.fillRect(0, 0, 48, 68);
+        if (def.id !== 'none') def.draw(pc, 48, 68);
+        item.appendChild(preview);
+        const label = document.createElement('span');
+        label.className = 'frame-name';
+        label.textContent = def.name;
+        item.appendChild(label);
+        item.addEventListener('click', () => {
+            document.querySelectorAll('.frame-item').forEach(el => el.classList.remove('active'));
+            item.classList.add('active');
+            selectedFrame = def.id;
+            applyFrame();
+        });
+        list.appendChild(item);
     });
+}
+
+function applyFrame() {
+    // Redraw canvas with frame overlay
+    // We need to re-render the frame on top of current canvas
+    // Save current art, then draw frame on top
+    const def = FRAME_DEFS.find(d => d.id === selectedFrame);
+    // Remove old frame overlay canvas if exists
+    let overlay = document.getElementById('frameOverlay');
+    if (!overlay) {
+        overlay = document.createElement('canvas');
+        overlay.id = 'frameOverlay';
+        overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100dvh;pointer-events:none;z-index:2;';
+        playScreen.appendChild(overlay);
+    }
+    const dpr = devicePixelRatio || 1;
+    overlay.width = mainCanvas.offsetWidth * dpr;
+    overlay.height = mainCanvas.offsetHeight * dpr;
+    const fc = overlay.getContext('2d');
+    fc.scale(dpr, dpr);
+    fc.clearRect(0, 0, mainCanvas.offsetWidth, mainCanvas.offsetHeight);
+    if (def && def.id !== 'none') {
+        def.draw(fc, mainCanvas.offsetWidth, mainCanvas.offsetHeight);
+    }
+}
+
+// ========== TOOLBAR LOGIC ==========
+let activePanel = 'colors'; // default open panel
+
+function initToolbar() {
+    const panels = {
+        colors: document.getElementById('colorPanel'),
+        stickers: document.getElementById('stickerPanel'),
+        frames: document.getElementById('framePanel'),
+    };
+
+    document.querySelectorAll('.toolbar-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tool = btn.dataset.tool;
+
+            // Action buttons (not toggle panels)
+            if (tool === 'photo') {
+                const photoBtn2 = document.getElementById('photoInput');
+                if (hasPhoto) {
+                    if (!confirm('Remove photo and clear canvas?')) return;
+                    hasPhoto = false; photoImage = null; photoPlacing = false; photoFlipX = false;
+                    btn.querySelector('.tb-icon').textContent = '📸';
+                    hidePhotoPlacementUI();
+                    tapCount = 0; tapCounter.textContent = '';
+                    createCardBtn.classList.add('hidden');
+                    paintInitialBackground();
+                } else {
+                    photoBtn2.click();
+                }
+                return;
+            }
+            if (tool === 'undo') { undoCanvas(); return; }
+            if (tool === 'clear') {
+                canvasHistory = []; updateUndoBtn();
+                tapCount = 0; tapCounter.textContent = '';
+                createCardBtn.classList.add('hidden');
+                challengeShown = false;
+                challengeText.classList.add('hidden');
+                const wm = document.getElementById('canvasWatermark');
+                if (wm) wm.classList.remove('hidden');
+                if (hasPhoto && photoImage) { drawPhotoBackground(); } else { paintInitialBackground(); }
+                return;
+            }
+            if (tool === 'sound') {
+                soundEnabled = !soundEnabled;
+                if (soundEnabled) initAudio();
+                btn.querySelector('.tb-icon').textContent = soundEnabled ? '🔊' : '🔇';
+                return;
+            }
+
+            // Panel toggle buttons
+            document.querySelectorAll('.toolbar-btn').forEach(b => {
+                if (['colors','stickers','frames'].includes(b.dataset.tool)) b.classList.remove('active');
+            });
+
+            if (activePanel === tool) {
+                // Close panel
+                Object.values(panels).forEach(p => p.classList.add('hidden'));
+                activePanel = null;
+            } else {
+                // Open this panel, close others
+                Object.values(panels).forEach(p => p.classList.add('hidden'));
+                if (panels[tool]) panels[tool].classList.remove('hidden');
+                btn.classList.add('active');
+                activePanel = tool;
+            }
+
+            // Deselect sticker when switching away
+            if (tool !== 'stickers') {
+                selectedSticker = null;
+                document.querySelectorAll('.sticker-item').forEach(el => el.classList.remove('active'));
+                document.getElementById('stickerHint').classList.add('hidden');
+            }
+        });
+    });
+
+    // Start with colors panel open
+    panels.colors.classList.remove('hidden');
 }
 
 // --- Canvas Setup ---
@@ -643,12 +935,10 @@ document.querySelectorAll('.color-dot').forEach(dot => {
         document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
         dot.classList.add('active');
         selectedColor = dot.dataset.color;
-        // Close sticker bar and deselect sticker when picking a color
-        const sBar = document.getElementById('stickerBar');
-        const sBtn = document.getElementById('stickerToggleBtn');
-        if (sBar && !sBar.classList.contains('hidden')) { sBar.classList.add('hidden'); sBtn.classList.remove('active'); }
+        // Deselect sticker when picking a color
         if (typeof selectedSticker !== 'undefined') selectedSticker = null;
         document.querySelectorAll('.sticker-item').forEach(s => s.classList.remove('active'));
+        document.getElementById('stickerHint').classList.add('hidden');
     });
 });
 
@@ -739,6 +1029,15 @@ function generateCard(name) {
 
     cc.drawImage(mainCanvas, 0, 0);
 
+    // Draw frame on card
+    const frameDef = FRAME_DEFS.find(d => d.id === selectedFrame);
+    if (frameDef && frameDef.id !== 'none') {
+        cc.save();
+        cc.scale(dpr, dpr);
+        frameDef.draw(cc, mainCanvas.offsetWidth, mainCanvas.offsetHeight);
+        cc.restore();
+    }
+
     cc.fillStyle = hasPhoto ? 'rgba(0,0,0,.4)' : 'rgba(0,0,0,.28)';
     cc.fillRect(0, h * .32, w, h * .38);
 
@@ -807,42 +1106,9 @@ document.getElementById('startBtn').addEventListener('click', () => {
 });
 
 // Undo
-document.getElementById('undoBtn').addEventListener('click', () => { undoCanvas(); });
+// Undo, Clear, Photo handled by toolbar
 
-// Clear
-document.getElementById('clearBtn').addEventListener('click', () => {
-    canvasHistory = []; updateUndoBtn();
-    tapCount = 0; tapCounter.textContent = '';
-    createCardBtn.classList.add('hidden');
-    challengeShown = false;
-    challengeText.classList.add('hidden');
-    const wm = document.getElementById('canvasWatermark');
-    if (wm) wm.classList.remove('hidden');
-    if (hasPhoto && photoImage) {
-        drawPhotoBackground();
-    } else {
-        paintInitialBackground();
-    }
-});
-
-// Photo Upload
-const photoBtn = document.getElementById('photoBtn');
 const photoInput = document.getElementById('photoInput');
-
-photoBtn.addEventListener('click', () => {
-    if (hasPhoto) {
-        if (!confirm('Remove photo and clear canvas?')) return;
-        hasPhoto = false; photoImage = null; photoPlacing = false; photoFlipX = false;
-        photoBtn.textContent = '📸';
-        photoBtn.classList.remove('has-photo');
-        hidePhotoPlacementUI();
-        tapCount = 0; tapCounter.textContent = '';
-        createCardBtn.classList.add('hidden');
-        paintInitialBackground();
-    } else {
-        photoInput.click();
-    }
-});
 
 photoInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -853,8 +1119,9 @@ photoInput.addEventListener('change', (e) => {
         img.onload = () => {
             photoImage = img;
             hasPhoto = true;
-            photoBtn.textContent = '✕';
-            photoBtn.classList.add('has-photo');
+            // Update toolbar photo icon
+            const pBtn = document.querySelector('[data-tool="photo"] .tb-icon');
+            if (pBtn) pBtn.textContent = '✕';
             tapCount = 0; tapCounter.textContent = '';
             createCardBtn.classList.add('hidden');
             // Start placement mode
@@ -978,8 +1245,8 @@ function cancelPhotoPlacement() {
     hasPhoto = false;
     photoImage = null;
     photoFlipX = false;
-    photoBtn.textContent = '📸';
-    photoBtn.classList.remove('has-photo');
+    const pBtn = document.querySelector('[data-tool="photo"] .tb-icon');
+    if (pBtn) pBtn.textContent = '📸';
     hidePhotoPlacementUI();
     paintInitialBackground();
 }
@@ -1182,4 +1449,6 @@ window.addEventListener('resize', () => {
 // Init
 initBgParticles();
 initStickerUI();
+initFrameUI();
+initToolbar();
 })();

@@ -33,30 +33,48 @@
     <div id="playScreen" class="screen">
         <canvas id="mainCanvas"></canvas>
         <div id="canvasWatermark" class="canvas-watermark">👆 Tap & swipe to<br>throw colors!</div>
-        <div id="colorPicker" class="color-picker">
-            <div class="color-dot" data-color="#FF6B35" style="background:#FF6B35"></div>
-            <div class="color-dot" data-color="#E91E63" style="background:#E91E63"></div>
-            <div class="color-dot" data-color="#4CAF50" style="background:#4CAF50"></div>
-            <div class="color-dot" data-color="#FFD600" style="background:#FFD600"></div>
-            <div class="color-dot" data-color="#2196F3" style="background:#2196F3"></div>
-            <div class="color-dot" data-color="#FF69B4" style="background:#FF69B4"></div>
-            <div class="color-dot" data-color="#9C27B0" style="background:#9C27B0"></div>
-            <div class="color-dot" data-color="#F44336" style="background:#F44336"></div>
-            <div class="color-dot random active active-mode" data-color="random" title="Random">🎲</div>
+
+        <!-- Top bar: counter + card button -->
+        <div class="top-bar">
+            <div id="tapCounter" class="tap-counter"></div>
+            <button id="createCardBtn" class="btn btn-card hidden">✨ Create Card</button>
         </div>
-        <div id="tapCounter" class="tap-counter"></div>
         <div id="challengeText" class="challenge-text hidden">🎯 How many colors can you throw?</div>
-        <button id="soundToggle" class="btn btn-sound" title="Toggle Sound">🔇</button>
-        <button id="createCardBtn" class="btn btn-card hidden">✨ Create Greeting Card</button>
-        <button id="undoBtn" class="btn btn-clear" style="left:64px;opacity:.3">↩️</button>
-        <button id="clearBtn" class="btn btn-clear">🗑️</button>
-        <button id="photoBtn" class="btn btn-photo">📸</button>
-        <input type="file" id="photoInput" accept="image/*" style="display:none">
-        <div id="photoHint" class="photo-hint hidden">Throw colors on your photo! 🎨</div>
-        <button id="stickerToggleBtn" class="btn btn-sticker-toggle">🎭 Stickers</button>
-        <div id="stickerBar" class="sticker-bar hidden">
+
+        <!-- Expandable panels (above toolbar) -->
+        <div id="colorPanel" class="tool-panel hidden">
+            <div id="colorPicker" class="color-picker">
+                <div class="color-dot" data-color="#FF6B35" style="background:#FF6B35"></div>
+                <div class="color-dot" data-color="#E91E63" style="background:#E91E63"></div>
+                <div class="color-dot" data-color="#4CAF50" style="background:#4CAF50"></div>
+                <div class="color-dot" data-color="#FFD600" style="background:#FFD600"></div>
+                <div class="color-dot" data-color="#2196F3" style="background:#2196F3"></div>
+                <div class="color-dot" data-color="#FF69B4" style="background:#FF69B4"></div>
+                <div class="color-dot" data-color="#9C27B0" style="background:#9C27B0"></div>
+                <div class="color-dot" data-color="#F44336" style="background:#F44336"></div>
+                <div class="color-dot random active active-mode" data-color="random" title="Random">🎲</div>
+            </div>
+        </div>
+        <div id="stickerPanel" class="tool-panel hidden">
             <div id="stickerList" class="sticker-list"></div>
         </div>
+        <div id="framePanel" class="tool-panel hidden">
+            <div id="frameList" class="frame-list"></div>
+        </div>
+
+        <!-- Bottom toolbar -->
+        <div class="bottom-toolbar">
+            <button class="toolbar-btn active" data-tool="colors"><span class="tb-icon">🎨</span><span class="tb-label">Colors</span></button>
+            <button class="toolbar-btn" data-tool="stickers"><span class="tb-icon">🎭</span><span class="tb-label">Stickers</span></button>
+            <button class="toolbar-btn" data-tool="frames"><span class="tb-icon">🖼️</span><span class="tb-label">Frames</span></button>
+            <button class="toolbar-btn" data-tool="photo"><span class="tb-icon">📸</span><span class="tb-label">Photo</span></button>
+            <button id="undoBtn" class="toolbar-btn" data-tool="undo" style="opacity:.3"><span class="tb-icon">↩️</span><span class="tb-label">Undo</span></button>
+            <button class="toolbar-btn" data-tool="clear"><span class="tb-icon">🗑️</span><span class="tb-label">Clear</span></button>
+            <button id="soundToggle" class="toolbar-btn" data-tool="sound"><span class="tb-icon">🔇</span><span class="tb-label">Sound</span></button>
+        </div>
+
+        <input type="file" id="photoInput" accept="image/*" style="display:none">
+        <div id="photoHint" class="photo-hint hidden">Throw colors on your photo! 🎨</div>
         <div id="stickerHint" class="sticker-hint hidden"></div>
     </div>
 
