@@ -443,35 +443,40 @@ function drawFlower(c, x, y, size) {
 
 function drawHandprint(c, x, y, size, color) {
     color = color || randomHoliColor();
-    const s = size * 0.022;
-    c.save(); c.translate(x, y); c.scale(s, s);
+    const s = size * 0.5;
+    c.save(); c.translate(x, y);
     c.fillStyle = color;
-    // Palm (slightly wider oval)
-    c.beginPath(); c.ellipse(0, 8, 14, 16, 0, 0, Math.PI * 2); c.fill();
-    // 4 Fingers pointing UP — index, middle, ring, pinky
-    const fingers = [
-        {x: -9, y: -14, w: 3.8, h: 14, a: 0.15},   // Index
-        {x: -3, y: -18, w: 3.8, h: 15, a: 0.03},    // Middle (tallest)
-        {x: 3, y: -17, w: 3.8, h: 14, a: -0.03},    // Ring
-        {x: 9, y: -13, w: 3.5, h: 12, a: -0.15},    // Pinky (shortest)
-    ];
-    fingers.forEach(f => {
-        c.beginPath();
-        c.save(); c.translate(f.x, f.y); c.rotate(f.a);
-        c.ellipse(0, 0, f.w, f.h, 0, 0, Math.PI * 2);
-        c.restore(); c.fill();
-    });
-    // Thumb — sticking out to the LEFT side
+    // Draw hand using a single path — traced outline
     c.beginPath();
-    c.save(); c.translate(-17, 2); c.rotate(0.8);
-    c.ellipse(0, 0, 3.5, 11, 0, 0, Math.PI * 2);
-    c.restore(); c.fill();
-    // Grain texture
+    c.scale(s / 50, s / 50);
+    // Wrist bottom
+    c.moveTo(-12, 50);
+    // Left side of palm up to pinky
+    c.lineTo(-18, 20);
+    c.lineTo(-20, -5);
+    // Pinky
+    c.lineTo(-22, -25); c.lineTo(-18, -30); c.lineTo(-15, -25); c.lineTo(-14, -10);
+    // Ring finger
+    c.lineTo(-12, -35); c.lineTo(-7, -42); c.lineTo(-3, -35); c.lineTo(-4, -12);
+    // Middle finger
+    c.lineTo(-2, -40); c.lineTo(3, -48); c.lineTo(7, -40); c.lineTo(5, -12);
+    // Index finger
+    c.lineTo(8, -35); c.lineTo(13, -40); c.lineTo(17, -32); c.lineTo(14, -10);
+    // Right side of palm
+    c.lineTo(18, -5);
+    // Thumb
+    c.lineTo(25, -15); c.lineTo(30, -12); c.lineTo(28, -2); c.lineTo(20, 10);
+    // Right side palm to wrist
+    c.lineTo(18, 25);
+    c.lineTo(12, 50);
+    c.closePath();
+    c.fill();
+    // Palm lines
     const {r,g,b} = hexToRgb(color);
-    for (let i = 0; i < 20; i++) {
-        c.beginPath(); c.arc((Math.random() - 0.5) * 24, (Math.random() - 0.5) * 35 - 2, 0.8, 0, Math.PI * 2);
-        c.fillStyle = `rgba(${Math.max(r-40,0)},${Math.max(g-40,0)},${Math.max(b-40,0)},0.3)`; c.fill();
-    }
+    c.strokeStyle = `rgba(${Math.max(r-50,0)},${Math.max(g-50,0)},${Math.max(b-50,0)},0.25)`;
+    c.lineWidth = 1.5;
+    c.beginPath(); c.moveTo(-10, 10); c.quadraticCurveTo(0, 5, 14, 8); c.stroke();
+    c.beginPath(); c.moveTo(-14, 0); c.quadraticCurveTo(-2, -5, 10, 0); c.stroke();
     c.restore();
 }
 
