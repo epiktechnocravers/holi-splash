@@ -13,10 +13,10 @@ html, body { width: 100%; height: 100dvh; overflow: hidden; font-family: 'Poppin
 .landing-subtitle { color: rgba(255,255,255,.8); font-size: clamp(.9rem, 3vw, 1.2rem); margin-bottom: 32px; }
 .landing-hint { color: rgba(255,255,255,.5); font-size: .85rem; margin-top: 16px; }
 /* Live stats on landing */
-.live-stats { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 28px; animation: fadeInSlide .6s ease-out .3s both; }
-.live-stat { display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,.08); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.12); border-radius: 14px; padding: 12px 16px; min-width: 80px; }
-.live-stat .ls-value { font-size: 1.3rem; font-weight: 700; color: #fff; line-height: 1; }
-.live-stat .ls-label { font-size: .55rem; color: rgba(255,255,255,.5); margin-top: 4px; text-transform: uppercase; letter-spacing: .04em; }
+.live-stats { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 28px; width: 100%; max-width: 360px; margin-left: auto; margin-right: auto; animation: fadeInSlide .6s ease-out .3s both; }
+.live-stat { display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,.08); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.12); border-radius: 14px; padding: 10px 14px; flex: 1; min-width: 0; }
+.live-stat .ls-value { font-size: 1.2rem; font-weight: 700; color: #fff; line-height: 1; }
+.live-stat .ls-label { font-size: .55rem; color: rgba(255,255,255,.5); margin-top: 4px; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
 .live-stats:empty { display: none; }
 
 .landing-footer { position: absolute; bottom: 16px; color: rgba(255,255,255,.4); font-size: .75rem; z-index: 2; }
