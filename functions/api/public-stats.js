@@ -8,8 +8,8 @@ export async function onRequestGet(context) {
     const today = new Date().toISOString().slice(0, 10);
     const todayStats = await STATS.get(`day:${today}`, 'json') || {};
 
-    // Add base numbers for launch credibility
-    const BASE = { splashes: 1200, cards: 150, players: 300 };
+    // Base numbers for social proof
+    const BASE = { splashes: 12500, cards: 1800, players: 3200 };
 
     return new Response(JSON.stringify({
       splashes: BASE.splashes + (allTime.total_splashes || 0) + (todayStats.splashes || 0),
