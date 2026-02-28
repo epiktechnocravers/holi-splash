@@ -1070,19 +1070,24 @@ let selectedGreeting = 0;
 })();
 
 function generateCard(name) {
-    const w = mainCanvas.width, h = mainCanvas.height;
     const dpr = devicePixelRatio || 1;
+    // Crop out toolbar area (bottom 60px)
+    const toolbarH = 60 * dpr;
+    const w = mainCanvas.width;
+    const h = mainCanvas.height - toolbarH;
+    const visibleH = mainCanvas.offsetHeight - 60;
     cardCanvas.width = w; cardCanvas.height = h;
     const cc = cardCanvas.getContext('2d');
 
-    cc.drawImage(mainCanvas, 0, 0);
+    // Draw only the visible area (excluding toolbar)
+    cc.drawImage(mainCanvas, 0, 0, w, h, 0, 0, w, h);
 
     // Draw frame on card
     const frameDef = FRAME_DEFS.find(d => d.id === selectedFrame);
     if (frameDef && frameDef.id !== 'none') {
         cc.save();
         cc.scale(dpr, dpr);
-        frameDef.draw(cc, mainCanvas.offsetWidth, mainCanvas.offsetHeight);
+        frameDef.draw(cc, mainCanvas.offsetWidth, visibleH);
         cc.restore();
     }
 
