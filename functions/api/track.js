@@ -86,15 +86,12 @@ export async function onRequestPost(context) {
       total_pageviews: 0, total_splashes: 0, total_cards: 0, total_shares: 0, total_photos: 0,
       first_visit: today, days_active: 0,
     };
-    if (eventMap[event]) {
-      const atKey = 'total_' + eventMap[event].replace('_created','s').replace('_shared','_shares').replace('_uploaded','_photos');
-      if (event === 'pageview') allTime.total_pageviews++;
-      else if (event === 'splash') allTime.total_splashes++;
-      else if (event === 'splash_batch') allTime.total_splashes = (allTime.total_splashes || 0) + Math.min(body.count || 1, 500);
-      else if (event === 'card_created') allTime.total_cards++;
-      else if (event === 'card_shared') allTime.total_shares++;
-      else if (event === 'photo_uploaded') allTime.total_photos++;
-    }
+    if (event === 'pageview') allTime.total_pageviews++;
+    else if (event === 'splash') allTime.total_splashes++;
+    else if (event === 'splash_batch') allTime.total_splashes = (allTime.total_splashes || 0) + Math.min(body.count || 1, 500);
+    else if (event === 'card_created') allTime.total_cards++;
+    else if (event === 'card_shared') allTime.total_shares++;
+    else if (event === 'photo_uploaded') allTime.total_photos++;
     // Track active days
     const activeDaysKey = `active:${today}`;
     const dayActive = await STATS.get(activeDaysKey);
