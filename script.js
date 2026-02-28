@@ -680,6 +680,36 @@ function launchConfetti() {
 }
 
 // --- Greeting Card Generation ---
+// --- Greeting Messages ---
+const GREETINGS = [
+    { emoji: '🎨', text: 'Happy Holi!', sub: 'May your life be as colorful as Holi!' },
+    { emoji: '🌈', text: 'Rang Barse!', sub: 'Wishing you a rainbow of happiness' },
+    { emoji: '💕', text: 'Holi Hai!', sub: 'Spreading love & colors your way' },
+    { emoji: '✨', text: 'Happy Holi!', sub: 'Let the colors of Holi brighten your life' },
+    { emoji: '🎉', text: 'Holi Mubarak!', sub: 'May this festival bring joy & prosperity' },
+    { emoji: '🌸', text: 'Happy Holi!', sub: 'Bura na mano, Holi hai! 😄' },
+    { emoji: '🔥', text: 'Holika Dahan!', sub: 'May good triumph over evil' },
+    { emoji: '💐', text: 'Happy Holi!', sub: 'Dipped in hues of love & trust' },
+];
+let selectedGreeting = 0;
+
+// Populate greeting picker
+(function initGreetingPicker() {
+    const picker = document.getElementById('greetingPicker');
+    if (!picker) return;
+    GREETINGS.forEach((g, i) => {
+        const opt = document.createElement('div');
+        opt.className = 'greeting-opt' + (i === 0 ? ' active' : '');
+        opt.innerHTML = `${g.emoji} <strong>${g.text}</strong> — ${g.sub}`;
+        opt.addEventListener('click', () => {
+            picker.querySelectorAll('.greeting-opt').forEach(o => o.classList.remove('active'));
+            opt.classList.add('active');
+            selectedGreeting = i;
+        });
+        picker.appendChild(opt);
+    });
+})();
+
 function generateCard(name) {
     const w = mainCanvas.width, h = mainCanvas.height;
     const dpr = devicePixelRatio || 1;
@@ -699,16 +729,23 @@ function generateCard(name) {
     cc.shadowColor = 'rgba(0,0,0,.5)';
     cc.shadowBlur = 20;
     cc.shadowOffsetY = 4;
-    cc.fillText('Happy Holi!', w / 2, h * .45);
+    const g = GREETINGS[selectedGreeting];
+    cc.fillText(g.text, w / 2, h * .42);
+
+    const subSize = Math.min(w / 18, 36);
+    cc.font = `400 ${subSize}px 'Poppins', sans-serif`;
+    cc.fillStyle = 'rgba(255,255,255,.85)';
+    cc.fillText(g.sub, w / 2, h * .52);
 
     const nameSize = Math.min(w / 14, 48);
     cc.font = `600 ${nameSize}px 'Poppins', sans-serif`;
-    cc.fillText(`From ${name}`, w / 2, h * .56);
+    cc.fillStyle = '#fff';
+    cc.fillText(`— ${name}`, w / 2, h * .61);
 
     const yearSize = Math.min(w / 20, 32);
     cc.font = `400 ${yearSize}px 'Poppins', sans-serif`;
-    cc.fillStyle = 'rgba(255,255,255,.8)';
-    cc.fillText('2026', w / 2, h * .64);
+    cc.fillStyle = 'rgba(255,255,255,.7)';
+    cc.fillText('2026', w / 2, h * .68);
 
     cc.shadowBlur = 0; cc.shadowOffsetY = 0;
     cc.font = `400 ${Math.min(w/30, 16)}px 'Poppins', sans-serif`;
