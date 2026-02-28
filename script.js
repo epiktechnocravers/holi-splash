@@ -14,6 +14,31 @@ function track(event, extra = {}) {
 // Track pageview on load
 track('pageview');
 
+// Load live stats for landing page
+(async function loadLiveStats() {
+    try {
+        const res = await fetch('/api/public-stats');
+        const data = await res.json();
+        const el = document.getElementById('liveStats');
+        if (!el || (!data.players && !data.splashes)) return;
+        const stats = [
+            { value: data.players, label: 'Players', emoji: '🎮' },
+            { value: data.splashes, label: 'Splashes', emoji: '🎨' },
+            { value: data.cards, label: 'Cards Made', emoji: '✨' },
+        ].filter(s => s.value > 0);
+        if (!stats.length) return;
+        el.innerHTML = stats.map(s =>
+            `<div class="live-stat"><span class="ls-value">${formatNum(s.value)}</span><span class="ls-label">${s.emoji} ${s.label}</span></div>`
+        ).join('');
+    } catch {}
+})();
+
+function formatNum(n) {
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+    return n.toString();
+}
+
 // Elements
 const landing = document.getElementById('landing');
 const bgCanvas = document.getElementById('bgCanvas');
