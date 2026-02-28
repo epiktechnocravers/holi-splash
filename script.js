@@ -311,6 +311,46 @@ document.getElementById('generateBtn').addEventListener('click', () => {
 });
 nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('generateBtn').click(); });
 
+// --- Share helpers ---
+let shareCount = 0;
+const shareToast = document.getElementById('shareToast');
+
+function showToast(msg) {
+    shareToast.textContent = msg;
+    shareToast.classList.remove('hidden');
+    clearTimeout(shareToast._t);
+    shareToast._t = setTimeout(() => shareToast.classList.add('hidden'), 3000);
+}
+
+function trackShare() {
+    shareCount++;
+    if (shareCount >= 3) showToast("You're a Holi Ambassador! 🏆");
+    else showToast("🎉 You're spreading Holi joy!");
+}
+
+function getCardBlob() {
+    return new Promise(resolve => cardCanvas.toBlob(resolve, 'image/png'));
+}
+
+async function nativeShare(blob, text) {
+    const file = new File([blob], 'holi-greeting-2026.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+            title: 'Happy Holi 2026! 🎨',
+            text: text || 'I made this colorful Holi greeting for you!',
+            url: SITE_URL,
+            files: [file]
+        });
+        return true;
+    }
+    return false;
+}
+
+function whatsAppFallback() {
+    const text = encodeURIComponent(`🎨 Happy Holi 2026! I made this colorful greeting for you! Check it out: ${SITE_URL}`);
+    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+}
+
 // Download
 document.getElementById('downloadBtn').addEventListener('click', () => {
     cardCanvas.toBlob(blob => {
@@ -321,19 +361,118 @@ document.getElementById('downloadBtn').addEventListener('click', () => {
     }, 'image/png');
 });
 
-// Share WhatsApp
-document.getElementById('shareBtn').addEventListener('click', () => {
-    const text = encodeURIComponent(`🎨 Happy Holi 2026! I made this colorful greeting for you! Check it out: ${SITE_URL}`);
-    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+// Share (Web Share API → WhatsApp fallback)
+document.getElementById('shareBtn').addEventListener('click', async () => {
+    try {
+        const blob = await getCardBlob();
+        const shared = await nativeShare(blob);
+        if (shared) { trackShare(); return; }
+    } catch(e) { /* user cancelled or error */ }
+    whatsAppFallback();
+    trackShare();
 });
 
-// Copy Link
-document.getElementById('copyBtn').addEventListener('click', () => {
-    navigator.clipboard.writeText(SITE_URL).then(() => {
-        const btn = document.getElementById('copyBtn');
-        btn.textContent = '✅ Copied!';
-        setTimeout(() => btn.textContent = '🔗 Copy Link', 2000);
-    });
+// Set as Status
+document.getElementById('statusBtn').addEventListener('click', async () => {
+    try {
+        const blob = await getCardBlob();
+        const shared = await nativeShare(blob, 'Set this as your WhatsApp Status! 🎨');
+        if (shared) { trackShare(); return; }
+    } catch(e) { /* cancelled */ }
+    whatsAppFallback();
+    trackShare();
+});
+
+// Copy Image to Clipboard
+document.getElementById('copyBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('copyBtn');
+    try {
+        const blob = await getCardBlob();
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        btn.textContent = '✅ Image Copied!';
+        setTimeout(() => btn.textContent = '📋 Copy Image', 2000);
+    } catch(e) {
+        // Fallback: copy URL
+        try {
+            await navigator.clipboard.writeText(SITE_URL);
+            btn.textContent = '✅ Link Copied!';
+        } catch(e2) {
+            btn.textContent = '❌ Failed';
+        }
+        setTimeout(() => btn.textContent = '📋 Copy Image', 2000);
+    }
+});
+
+// Instagram Story
+document.getElementById('storyBtn').addEventListener('click', async () => {
+    const name = nameInput.value.trim() || 'Friend';
+    const sw = 1080, sh = 1920;
+    const sc = document.createElement('canvas');
+    sc.width = sw; sc.height = sh;
+    const sx = sc.getContext('2d');
+
+    // Fill with gradient background
+    const bg = sx.createLinearGradient(0, 0, sw, sh);
+    bg.addColorStop(0, '#1a0a2e'); bg.addColorStop(1, '#2d1b69');
+    sx.fillStyle = bg; sx.fillRect(0, 0, sw, sh);
+
+    // Draw splash canvas cropped to fill 1080x1920
+    const srcW = mainCanvas.width, srcH = mainCanvas.height;
+    const scale = Math.max(sw / srcW, sh / srcH);
+    const dw = srcW * scale, dh = srcH * scale;
+    sx.drawImage(mainCanvas, (sw - dw) / 2, (sh - dh) / 2, dw, dh);
+
+    // Overlay for text
+    sx.fillStyle = 'rgba(0,0,0,.3)';
+    sx.fillRect(0, sh * .3, sw, sh * .4);
+
+    sx.textAlign = 'center'; sx.textBaseline = 'middle';
+    sx.shadowColor = 'rgba(0,0,0,.6)'; sx.shadowBlur = 20; sx.shadowOffsetY = 4;
+
+    // Happy Holi!
+    sx.font = "800 120px 'Baloo 2', cursive";
+    sx.fillStyle = '#fff';
+    sx.fillText('Happy Holi!', sw / 2, sh * .42);
+
+    // From Name
+    sx.font = "600 56px 'Poppins', sans-serif";
+    sx.fillText(`From ${name}`, sw / 2, sh * .52);
+
+    // Year
+    sx.font = "400 40px 'Poppins', sans-serif";
+    sx.fillStyle = 'rgba(255,255,255,.8)';
+    sx.fillText('2026', sw / 2, sh * .59);
+
+    // Swipe up
+    sx.shadowBlur = 0; sx.shadowOffsetY = 0;
+    sx.font = "400 28px 'Poppins', sans-serif";
+    sx.fillStyle = 'rgba(255,255,255,.6)';
+    sx.fillText('Swipe Up → holi-splash.pages.dev', sw / 2, sh * .92);
+
+    // Watermark
+    sx.font = "400 20px 'Poppins', sans-serif";
+    sx.fillStyle = 'rgba(255,255,255,.3)';
+    sx.textAlign = 'right';
+    sx.fillText('technocravers.com', sw - 30, sh - 30);
+
+    // Download + try share
+    sc.toBlob(async (blob) => {
+        // Try native share first
+        try {
+            const file = new File([blob], 'holi-story-2026.png', { type: 'image/png' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({ title: 'Happy Holi 2026!', files: [file] });
+                trackShare();
+                return;
+            }
+        } catch(e) { /* cancelled */ }
+        // Fallback: download
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'holi-story-2026.png';
+        a.click(); URL.revokeObjectURL(url);
+        showToast('📱 Story image downloaded! Share it on Instagram');
+    }, 'image/png');
 });
 
 // Back
