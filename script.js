@@ -600,6 +600,12 @@ document.querySelectorAll('.color-dot').forEach(dot => {
         document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
         dot.classList.add('active');
         selectedColor = dot.dataset.color;
+        // Close sticker bar and deselect sticker when picking a color
+        const sBar = document.getElementById('stickerBar');
+        const sBtn = document.getElementById('stickerToggleBtn');
+        if (sBar && !sBar.classList.contains('hidden')) { sBar.classList.add('hidden'); sBtn.classList.remove('active'); }
+        if (typeof selectedSticker !== 'undefined') selectedSticker = null;
+        document.querySelectorAll('.sticker-item').forEach(s => s.classList.remove('active'));
     });
 });
 
