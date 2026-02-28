@@ -37,7 +37,7 @@ html, body { width: 100%; height: 100dvh; overflow: hidden; font-family: 'Poppin
 .challenge-text.hidden { display: none; }
 @keyframes fadeInSlide { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-.btn-sound { position: fixed; top: 16px; right: 130px; z-index: 5; background: rgba(0,0,0,.5); color: #fff; padding: 10px 14px; font-size: .85rem; backdrop-filter: blur(5px); line-height: 1; }
+.btn-sound { position: fixed; top: 16px; left: 70px; z-index: 5; background: rgba(0,0,0,.5); color: #fff; padding: 10px 14px; font-size: .85rem; backdrop-filter: blur(5px); line-height: 1; }
 
 .btn-card { position: fixed; top: 56px; left: 50%; transform: translateX(-50%); z-index: 5; background: linear-gradient(135deg, #E91E63, #9C27B0); color: #fff; animation: slideDown .4s ease-out, cardGlow 2s infinite 1s; box-shadow: 0 4px 20px rgba(156,39,176,.4); }
 .btn-card.hidden { display: none; }

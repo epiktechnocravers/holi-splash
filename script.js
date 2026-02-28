@@ -105,12 +105,12 @@ function hexToRgb(hex) {
 // --- Secondary particle animation ---
 function animateParticles(x, y, color) {
     const {r,g,b} = hexToRgb(color);
-    const count = 3 + (Math.random() * 3 | 0);
+    const count = 2 + (Math.random() * 2 | 0);
     const parts = [];
     for (let i = 0; i < count; i++) {
         const angle = Math.random() * Math.PI * 2;
-        const speed = 1.5 + Math.random() * 3;
-        parts.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, r: 2 + Math.random() * 3, alpha: 1 });
+        const speed = 1 + Math.random() * 2;
+        parts.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, r: 1.5 + Math.random() * 2, alpha: 0.7 });
     }
     let frame = 0;
     function tick() {
@@ -141,7 +141,7 @@ function animateSplashFadeIn(x, y, color, radius, drawFn) {
         const alpha = (frame + 1) / totalFrames;
         ctx.save();
         ctx.globalAlpha = alpha;
-        ctx.globalCompositeOperation = 'multiply';
+        ctx.globalCompositeOperation = 'source-over';
         drawFn(x, y, color, radius);
         ctx.restore();
         frame++;
@@ -186,7 +186,7 @@ function drawSplash(x, y, size) {
 
     // Main blob with color mixing composite
     ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
+    ctx.globalCompositeOperation = 'source-over';
     drawSplashShape(x, y, color, radius);
     ctx.restore();
 
@@ -197,7 +197,7 @@ function drawSplash(x, y, size) {
     ctx.restore();
 
     // Smaller droplets
-    const numDroplets = 5 + (Math.random() * 8 | 0);
+    const numDroplets = 3 + (Math.random() * 4 | 0);
     for (let i = 0; i < numDroplets; i++) {
         const angle = Math.random() * Math.PI * 2;
         const dist = radius + Math.random() * radius * 1.2;
@@ -579,10 +579,13 @@ function onMove(e) {
     const pts = getCanvasXY(e);
     pts.forEach(p => {
         if (lastX !== null && lastY !== null) {
-            const interp = interpolatePoints(lastX, lastY, p.x, p.y, 15);
-            interp.forEach(ip => drawSplash(ip.x, ip.y, Math.random() * 15 + 12));
+            const dx = p.x - lastX, dy = p.y - lastY;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist > 40) {
+                drawSplash(p.x, p.y, Math.random() * 25 + 25);
+            }
         } else {
-            drawSplash(p.x, p.y, Math.random() * 15 + 12);
+            drawSplash(p.x, p.y, Math.random() * 25 + 25);
         }
         lastX = p.x; lastY = p.y;
     });
