@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Holi Color Splash 2026 — Throw Virtual Colors!</title>
+    <meta name="description" content="Celebrate Holi 2026 with this interactive color splash game. Create and share personalized Holi greeting cards!">
+    <meta property="og:title" content="Holi Color Splash 2026 — Throw Colors, Share Joy!">
+    <meta property="og:description" content="Celebrate Holi 2026 with this interactive color splash game. Create and share personalized Holi greeting cards!">
+    <meta property="og:image" content="og-image.png">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#1a0a2e">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Landing Screen -->
+    <div id="landing" class="screen active">
+        <canvas id="bgCanvas"></canvas>
+        <div class="landing-content">
+            <h1 class="landing-title">🎨 Holi Color Splash!</h1>
+            <p class="landing-subtitle">Throw virtual colors & create your own Holi greeting card</p>
+            <button id="startBtn" class="btn btn-primary pulse">🎉 Start Playing!</button>
+            <p class="landing-hint">Tap & swipe to throw colors</p>
+        </div>
+        <footer class="landing-footer">Built with ❤️ by Epik Technocravers</footer>
+    </div>
+
+    <!-- Canvas Screen -->
+    <div id="playScreen" class="screen">
+        <canvas id="mainCanvas"></canvas>
+        <div id="colorPicker" class="color-picker">
+            <div class="color-dot active" data-color="#FF6B35" style="background:#FF6B35"></div>
+            <div class="color-dot" data-color="#E91E63" style="background:#E91E63"></div>
+            <div class="color-dot" data-color="#4CAF50" style="background:#4CAF50"></div>
+            <div class="color-dot" data-color="#FFD600" style="background:#FFD600"></div>
+            <div class="color-dot" data-color="#2196F3" style="background:#2196F3"></div>
+            <div class="color-dot" data-color="#FF69B4" style="background:#FF69B4"></div>
+            <div class="color-dot" data-color="#9C27B0" style="background:#9C27B0"></div>
+            <div class="color-dot" data-color="#F44336" style="background:#F44336"></div>
+            <div class="color-dot random active-mode" data-color="random" title="Random">🎲</div>
+        </div>
+        <div id="tapCounter" class="tap-counter"></div>
+        <button id="createCardBtn" class="btn btn-card hidden">✨ Create Greeting Card</button>
+        <button id="clearBtn" class="btn btn-clear">🗑️</button>
+    </div>
+
+    <!-- Name Input Overlay -->
+    <div id="nameOverlay" class="overlay hidden">
+        <div class="overlay-card">
+            <h2>Almost there! 🎊</h2>
+            <p>Enter your name for the greeting card</p>
+            <input type="text" id="nameInput" placeholder="Your Name" maxlength="30" autocomplete="off">
+            <button id="generateBtn" class="btn btn-primary">🎨 Create My Holi Card</button>
+        </div>
+    </div>
+
+    <!-- Greeting Card Screen -->
+    <div id="cardScreen" class="screen">
+        <canvas id="cardCanvas"></canvas>
+        <div class="card-actions">
+            <button id="downloadBtn" class="btn btn-download">📥 Download</button>
+            <button id="shareBtn" class="btn btn-share">📤 Share on WhatsApp</button>
+            <button id="copyBtn" class="btn btn-copy">🔗 Copy Link</button>
+            <button id="backBtn" class="btn btn-back">← Make Another</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
