@@ -718,8 +718,8 @@ function generateCard(name) {
 
     cc.drawImage(mainCanvas, 0, 0);
 
-    cc.fillStyle = hasPhoto ? 'rgba(0,0,0,.35)' : 'rgba(0,0,0,.25)';
-    cc.fillRect(0, h * .3, w, h * .45);
+    cc.fillStyle = hasPhoto ? 'rgba(0,0,0,.4)' : 'rgba(0,0,0,.28)';
+    cc.fillRect(0, h * .32, w, h * .38);
 
     const titleSize = Math.min(w / 6, 120);
     cc.textAlign = 'center';
@@ -730,22 +730,22 @@ function generateCard(name) {
     cc.shadowBlur = 20;
     cc.shadowOffsetY = 4;
     const g = GREETINGS[selectedGreeting];
-    cc.fillText(g.text, w / 2, h * .42);
+    cc.fillText(g.text, w / 2, h * .43);
 
     const subSize = Math.min(w / 18, 36);
     cc.font = `400 ${subSize}px 'Poppins', sans-serif`;
     cc.fillStyle = 'rgba(255,255,255,.85)';
-    cc.fillText(g.sub, w / 2, h * .52);
+    cc.fillText(g.sub, w / 2, h * .50);
 
-    const nameSize = Math.min(w / 14, 48);
-    cc.font = `600 ${nameSize}px 'Poppins', sans-serif`;
+    const nameSize = Math.min(w / 11, 56);
+    cc.font = `700 ${nameSize}px 'Baloo 2', cursive`;
     cc.fillStyle = '#fff';
-    cc.fillText(`— ${name}`, w / 2, h * .61);
+    cc.fillText(`— ${name}`, w / 2, h * .58);
 
-    const yearSize = Math.min(w / 20, 32);
+    const yearSize = Math.min(w / 22, 28);
     cc.font = `400 ${yearSize}px 'Poppins', sans-serif`;
-    cc.fillStyle = 'rgba(255,255,255,.7)';
-    cc.fillText('2026', w / 2, h * .68);
+    cc.fillStyle = 'rgba(255,255,255,.6)';
+    cc.fillText('2026', w / 2, h * .64);
 
     cc.shadowBlur = 0; cc.shadowOffsetY = 0;
     cc.font = `400 ${Math.min(w/30, 16)}px 'Poppins', sans-serif`;
@@ -1044,19 +1044,104 @@ document.getElementById('downloadBtn').addEventListener('click', () => {
     }, 'image/png');
 });
 
-// Share WhatsApp
-document.getElementById('shareBtn').addEventListener('click', () => {
-    const text = encodeURIComponent(`🎨 Happy Holi 2026! I made this colorful greeting for you! Check it out: ${SITE_URL}`);
-    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+// Helper: get card as blob/file
+function getCardBlob() {
+    return new Promise(resolve => cardCanvas.toBlob(resolve, 'image/png'));
+}
+function getCardFile(name = 'holi-greeting-2026.png') {
+    return getCardBlob().then(blob => new File([blob], name, { type: 'image/png' }));
+}
+function showToast(msg) {
+    const t = document.getElementById('shareToast');
+    t.textContent = msg; t.classList.remove('hidden');
+    setTimeout(() => t.classList.add('hidden'), 2500);
+}
+
+// Share (native share with image)
+document.getElementById('shareBtn').addEventListener('click', async () => {
+    try {
+        const file = await getCardFile();
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+                files: [file],
+                title: 'Happy Holi 2026! 🎨',
+                text: `🎨 Happy Holi 2026! Made with ${SITE_URL}`
+            });
+        } else {
+            // Fallback: download + open WhatsApp with text
+            const blob = await getCardBlob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'holi-greeting-2026.png'; a.click();
+            URL.revokeObjectURL(url);
+            const text = encodeURIComponent(`🎨 Happy Holi 2026! I made this colorful greeting for you! ${SITE_URL}`);
+            window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+            showToast('Image downloaded! Attach it in WhatsApp 📎');
+        }
+    } catch (e) {
+        if (e.name !== 'AbortError') showToast('Share cancelled');
+    }
 });
 
-// Copy Link
-document.getElementById('copyBtn').addEventListener('click', () => {
-    navigator.clipboard.writeText(SITE_URL).then(() => {
-        const btn = document.getElementById('copyBtn');
-        btn.textContent = '✅ Copied!';
-        setTimeout(() => btn.textContent = '🔗 Copy Link', 2000);
-    });
+// Create Story (Instagram-sized 1080x1920)
+document.getElementById('storyBtn').addEventListener('click', async () => {
+    const storyW = 1080, storyH = 1920;
+    const sc = document.createElement('canvas');
+    sc.width = storyW; sc.height = storyH;
+    const sctx = sc.getContext('2d');
+    // Draw card centered/scaled to fill story
+    const cardRatio = cardCanvas.width / cardCanvas.height;
+    const storyRatio = storyW / storyH;
+    let dw, dh, dx, dy;
+    if (cardRatio > storyRatio) {
+        dh = storyH; dw = dh * cardRatio; dx = (storyW - dw) / 2; dy = 0;
+    } else {
+        dw = storyW; dh = dw / cardRatio; dx = 0; dy = (storyH - dh) / 2;
+    }
+    sctx.fillStyle = '#111';
+    sctx.fillRect(0, 0, storyW, storyH);
+    sctx.drawImage(cardCanvas, dx, dy, dw, dh);
+
+    sc.toBlob(async (blob) => {
+        const file = new File([blob], 'holi-story-2026.png', { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try { await navigator.share({ files: [file], title: 'Happy Holi 2026! 🎨' }); } catch {}
+        } else {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'holi-story-2026.png'; a.click();
+            URL.revokeObjectURL(url);
+            showToast('Story image downloaded! Post it on Instagram/WhatsApp 📱');
+        }
+    }, 'image/png');
+});
+
+// Set as Status (download + open WhatsApp status)
+document.getElementById('statusBtn').addEventListener('click', async () => {
+    try {
+        const file = await getCardFile('holi-status-2026.png');
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: 'Happy Holi 2026!' });
+        } else {
+            const blob = await getCardBlob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'holi-status-2026.png'; a.click();
+            URL.revokeObjectURL(url);
+            showToast('Image saved! Open WhatsApp → Status → 📎');
+        }
+    } catch (e) {
+        if (e.name !== 'AbortError') showToast('Cancelled');
+    }
+});
+
+// Copy Image
+document.getElementById('copyBtn').addEventListener('click', async () => {
+    try {
+        const blob = await getCardBlob();
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        showToast('✅ Image copied to clipboard!');
+    } catch {
+        // Fallback: copy link
+        navigator.clipboard.writeText(SITE_URL).then(() => showToast('🔗 Link copied!'));
+    }
 });
 
 // Back
