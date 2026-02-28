@@ -228,6 +228,8 @@ function drawSplash(x, y, size) {
 
     tapCount++;
     tapCounter.textContent = `🎨 ${tapCount} splashes`;
+    const wm = document.getElementById('canvasWatermark');
+    if (wm && !wm.classList.contains('hidden')) wm.classList.add('hidden');
     if (tapCount >= 8 && createCardBtn.classList.contains('hidden')) {
         createCardBtn.classList.remove('hidden');
     }
@@ -724,6 +726,8 @@ document.getElementById('clearBtn').addEventListener('click', () => {
     createCardBtn.classList.add('hidden');
     challengeShown = false;
     challengeText.classList.add('hidden');
+    const wm = document.getElementById('canvasWatermark');
+    if (wm) wm.classList.remove('hidden');
     if (hasPhoto && photoImage) {
         drawPhotoBackground();
     } else {

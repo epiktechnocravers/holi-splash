@@ -32,12 +32,15 @@ html, body { width: 100%; height: 100dvh; overflow: hidden; font-family: 'Poppin
 .color-dot.random { background: conic-gradient(#FF6B35, #E91E63, #4CAF50, #FFD600, #2196F3, #9C27B0, #FF6B35); }
 
 .tap-counter { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.6); color: #fff; padding: 6px 14px; border-radius: 20px; font-size: .8rem; z-index: 5; backdrop-filter: blur(5px); }
+.tap-counter:empty { display: none; }
+.canvas-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(0,0,0,.12); font-size: 1.4rem; font-family: 'Poppins', sans-serif; text-align: center; pointer-events: none; z-index: 1; line-height: 1.8; }
+.canvas-watermark.hidden { display: none; }
 
 .challenge-text { position: fixed; top: 52px; right: 16px; background: rgba(233,30,99,.85); color: #fff; padding: 6px 14px; border-radius: 12px; font-size: .75rem; z-index: 5; animation: fadeInSlide .5s ease-out; }
 .challenge-text.hidden { display: none; }
 @keyframes fadeInSlide { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-.btn-sound { position: fixed; top: 16px; right: 16px; z-index: 5; background: rgba(0,0,0,.5); color: #fff; padding: 10px 14px; font-size: .85rem; backdrop-filter: blur(5px); line-height: 1; }
+.btn-sound { position: fixed; top: 16px; right: 12px; z-index: 5; background: rgba(0,0,0,.5); color: #fff; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: .85rem; backdrop-filter: blur(5px); line-height: 1; border-radius: 12px; }
 
 .btn-card { position: fixed; top: 56px; left: 50%; transform: translateX(-50%); z-index: 5; background: linear-gradient(135deg, #E91E63, #9C27B0); color: #fff; animation: slideDown .4s ease-out, cardGlow 2s infinite 1s; box-shadow: 0 4px 20px rgba(156,39,176,.4); }
 .btn-card.hidden { display: none; }
@@ -72,7 +75,7 @@ html, body { width: 100%; height: 100dvh; overflow: hidden; font-family: 'Poppin
 .share-toast.hidden { display: none; }
 
 /* Photo button */
-.btn-photo { position: fixed; top: 16px; right: 60px; z-index: 6; background: rgba(0,0,0,.5); color: #fff; padding: 10px 14px; font-size: .85rem; backdrop-filter: blur(5px); line-height: 1; }
+.btn-photo { position: fixed; top: 16px; right: 56px; z-index: 6; background: rgba(0,0,0,.5); color: #fff; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: .85rem; backdrop-filter: blur(5px); line-height: 1; border-radius: 12px; }
 .btn-photo.has-photo { background: #E91E63; }
 .photo-hint { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: rgba(233,30,99,.9); color: #fff; padding: 6px 16px; border-radius: 20px; font-size: .8rem; z-index: 6; white-space: nowrap; }
 .photo-hint.hidden { display: none; }
