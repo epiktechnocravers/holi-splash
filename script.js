@@ -46,6 +46,7 @@ let lastX = null, lastY = null;
 let photoPlacing = false;
 let photoX = 0, photoY = 0, photoScale = 1, photoRotation = 0, photoFlipX = false;
 let photoDragStart = null, photoPinchStart = null, photoScaleStart = 1;
+let prePhotoCanvasData = null; // saved canvas state before photo placement
 let soundEnabled = false;
 let audioCtx = null;
 let challengeShown = false;
@@ -444,27 +445,31 @@ function drawHandprint(c, x, y, size, color) {
     color = color || randomHoliColor();
     const s = size * 0.022;
     c.save(); c.translate(x, y); c.scale(s, s);
-    c.beginPath();
-    // Palm
-    c.ellipse(0, 5, 12, 14, 0, 0, Math.PI * 2);
-    // Fingers (simplified)
+    c.fillStyle = color;
+    // Palm (slightly wider oval)
+    c.beginPath(); c.ellipse(0, 8, 14, 16, 0, 0, Math.PI * 2); c.fill();
+    // 4 Fingers pointing UP — index, middle, ring, pinky
     const fingers = [
-        {x: -10, y: -12, w: 4, h: 12, a: 0.2},
-        {x: -4, y: -18, w: 3.5, h: 13, a: 0.05},
-        {x: 2, y: -19, w: 3.5, h: 13, a: -0.05},
-        {x: 8, y: -16, w: 3.5, h: 12, a: -0.15},
-        {x: 14, y: -4, w: 3.5, h: 10, a: -0.7},
+        {x: -9, y: -14, w: 3.8, h: 14, a: 0.15},   // Index
+        {x: -3, y: -18, w: 3.8, h: 15, a: 0.03},    // Middle (tallest)
+        {x: 3, y: -17, w: 3.8, h: 14, a: -0.03},    // Ring
+        {x: 9, y: -13, w: 3.5, h: 12, a: -0.15},    // Pinky (shortest)
     ];
     fingers.forEach(f => {
+        c.beginPath();
         c.save(); c.translate(f.x, f.y); c.rotate(f.a);
         c.ellipse(0, 0, f.w, f.h, 0, 0, Math.PI * 2);
-        c.restore();
+        c.restore(); c.fill();
     });
-    c.fillStyle = color; c.fill();
+    // Thumb — sticking out to the LEFT side
+    c.beginPath();
+    c.save(); c.translate(-17, 2); c.rotate(0.8);
+    c.ellipse(0, 0, 3.5, 11, 0, 0, Math.PI * 2);
+    c.restore(); c.fill();
     // Grain texture
     const {r,g,b} = hexToRgb(color);
     for (let i = 0; i < 20; i++) {
-        c.beginPath(); c.arc((Math.random() - 0.5) * 20, (Math.random() - 0.5) * 30, 0.8, 0, Math.PI * 2);
+        c.beginPath(); c.arc((Math.random() - 0.5) * 24, (Math.random() - 0.5) * 35 - 2, 0.8, 0, Math.PI * 2);
         c.fillStyle = `rgba(${Math.max(r-40,0)},${Math.max(g-40,0)},${Math.max(b-40,0)},0.3)`; c.fill();
     }
     c.restore();
@@ -1136,6 +1141,8 @@ photoInput.addEventListener('change', (e) => {
 // --- Photo Placement Mode ---
 function startPhotoPlacement() {
     photoPlacing = true;
+    // Save existing canvas art so we can composite photo behind it
+    prePhotoCanvasData = ctx.getImageData(0, 0, mainCanvas.width, mainCanvas.height);
     const cw = mainCanvas.offsetWidth, ch = mainCanvas.offsetHeight;
     // Default: center, fit 60% of canvas width
     const imgRatio = photoImage.width / photoImage.height;
@@ -1192,7 +1199,7 @@ function hidePhotoPlacementUI() {
 function renderPhotoPlacement() {
     if (!photoPlacing || !photoImage) return;
     const cw = mainCanvas.offsetWidth, ch = mainCanvas.offsetHeight;
-    // Redraw background
+    // Redraw background then existing art on top
     paintInitialBackground();
     // Draw photo with transform
     const dw = photoImage.width * photoScale;
@@ -1219,13 +1226,29 @@ function renderPhotoPlacement() {
         ctx.fillRect(hx, hy, hs, hs);
     });
     ctx.restore();
+    // Draw existing art (splashes) on top of photo preview
+    if (prePhotoCanvasData) {
+        // Create temp canvas to composite
+        const tmp = document.createElement('canvas');
+        tmp.width = mainCanvas.width; tmp.height = mainCanvas.height;
+        const tc = tmp.getContext('2d');
+        tc.putImageData(prePhotoCanvasData, 0, 0);
+        // Draw existing art with destination-over would put photo behind,
+        // but we want splashes ON TOP of photo, so use source-over on main canvas
+        // However we need to exclude the white/pastel background from the saved data
+        // Use 'multiply' or just overlay with some transparency
+        ctx.save();
+        ctx.globalCompositeOperation = 'darken';
+        ctx.drawImage(tmp, 0, 0, mainCanvas.offsetWidth, mainCanvas.offsetHeight);
+        ctx.restore();
+    }
 }
 
 function stampPhoto() {
     if (!photoPlacing || !photoImage) return;
     photoPlacing = false;
     hidePhotoPlacementUI();
-    // Draw final photo on canvas (no border/handles)
+    // Draw: background → photo → existing art (splashes on top)
     paintInitialBackground();
     const dw = photoImage.width * photoScale;
     const dh = photoImage.height * photoScale;
@@ -1235,6 +1258,17 @@ function stampPhoto() {
     if (photoFlipX) ctx.scale(-1, 1);
     ctx.drawImage(photoImage, -dw / 2, -dh / 2, dw, dh);
     ctx.restore();
+    // Restore existing splashes on top using darken blend
+    if (prePhotoCanvasData) {
+        const tmp = document.createElement('canvas');
+        tmp.width = mainCanvas.width; tmp.height = mainCanvas.height;
+        tmp.getContext('2d').putImageData(prePhotoCanvasData, 0, 0);
+        ctx.save();
+        ctx.globalCompositeOperation = 'darken';
+        ctx.drawImage(tmp, 0, 0, mainCanvas.offsetWidth, mainCanvas.offsetHeight);
+        ctx.restore();
+        prePhotoCanvasData = null;
+    }
     // Show photo hint
     const phint = document.getElementById('photoHint');
     if (phint) { phint.classList.remove('hidden'); setTimeout(() => phint.classList.add('hidden'), 2500); }
@@ -1248,7 +1282,13 @@ function cancelPhotoPlacement() {
     const pBtn = document.querySelector('[data-tool="photo"] .tb-icon');
     if (pBtn) pBtn.textContent = '📸';
     hidePhotoPlacementUI();
-    paintInitialBackground();
+    // Restore original canvas with existing art
+    if (prePhotoCanvasData) {
+        ctx.putImageData(prePhotoCanvasData, 0, 0);
+        prePhotoCanvasData = null;
+    } else {
+        paintInitialBackground();
+    }
 }
 
 // Photo placement touch handlers (on mainCanvas)
